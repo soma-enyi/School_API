@@ -1,7 +1,11 @@
-#[allow(non_snake_case)]
-pub mod Auth_controllers;
-pub mod school_controllers;
-pub mod student_controllers;
+pub mod auth;
+pub mod admin;
+pub mod student;
+pub mod mentor;
+pub mod school;
 
-#[allow(non_snake_case)]
-pub use Auth_controllers::*;
+pub use auth::*;
+pub use admin::*;
+pub use student::*;
+pub use mentor::*;
+pub use school::*;
