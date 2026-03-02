@@ -1,40 +1,138 @@
-# 🏫 School Management API
+# School Backend API
 
-A high-performance, type-safe backend service built with **Rust** and **Axum**. This project implements a structured learning management system focusing on student applications, mentor interventions, and GitHub-based assignment workflows.
+A Rust backend API for managing schools and students, built with Axum and PostgreSQL.
 
-## 🏗 Architecture
-The project follows a **Layered Architecture** to ensure clean separation of concerns and maintainability:
+## Prerequisites
 
-* **`src/routes/`**: Endpoint definitions and routing logic.
-* **`src/controllers/`**: Request handling, payload validation, and response mapping.
-* **`src/services/`**: Core business logic (e.g., application status transitions, GitHub API calls).
-* **`src/models/`**: Data structures representing **Users** and **Schools**, including SQLx integration.
-* **`src/middleware/`**: Logic for authentication, logging, and network-specific validation.
-* **`src/utils/`**: Shared utilities for barcode generation and JWT handling.
-* **`src/error.rs`**: Centralized error types converted into HTTP responses.
+- Rust (latest stable version)
+- PostgreSQL 17 or higher
+- Ubuntu/Debian Linux (or similar)
 
----
+## Installation & Setup
 
-## 🛠 Tech Stack
-* **Language**: Rust (Edition 2021)
-* **Web Framework**: [Axum](https://github.com/tokio-rs/axum)
-* **Runtime**: [Tokio](https://tokio.rs/)
-* **Database**: PostgreSQL + [SQLx](https://github.com/launchbadge/sqlx) (Compile-time verified queries)
-* **Serialization**: Serde (JSON)
-* **Integration**: GitHub API (via `octocrab`)
+### 1. Install PostgreSQL
 
----
+```bash
+sudo apt update
+sudo apt install -y postgresql postgresql-contrib
+```
 
-## 🚀 Getting Started
+### 2. Start PostgreSQL Service
 
-### Prerequisites
-* [Rust](https://www.rust-lang.org/tools/install) (latest stable)
-* [PostgreSQL](https://www.postgresql.org/)
-* `sqlx-cli` (Install via `cargo install sqlx-cli --no-default-features --features postgres`)
+```bash
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
 
-### Environment Setup
-Create a `.env` file in the root directory:
-```env
-DATABASE_URL=postgres://user:password@localhost:5432/school_db
-PORT=8080
-GITHUB_TOKEN=your_github_personal_access_token
+### 3. Set Up Database
+
+```bash
+# Set password for postgres user
+sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
+
+# Create the database
+sudo -u postgres createdb school_db
+
+# Run migrations
+sudo -u postgres psql -d school_db -f migrations/001_init.sql
+```
+
+### 4. Configure Environment
+
+The `.env` file is already configured with:
+```
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/school_db
+```
+
+You can modify this if you use different credentials.
+
+## Running the Application
+
+### Development Mode
+
+```bash
+cargo run
+```
+
+The server will start on `http://0.0.0.0:8080`
+
+You should see output like:
+```
+INFO school_backend: Connecting to database...
+INFO school_backend: Database connected successfully!
+INFO school_backend: Database health check passed!
+INFO school_backend: Server starting on 0.0.0.0:8080
+```
+
+### Production Build
+
+```bash
+cargo build --release
+./target/release/school-backend
+```
+
+## API Endpoints
+
+### Schools
+
+- `GET /api/schools` - List all schools
+- `GET /api/schools/:id` - Get a specific school by ID
+- `POST /api/schools` - Create a new school
+
+Example POST request:
+```bash
+curl -X POST http://localhost:8080/api/schools \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test School","address":"123 Main St"}'
+```
+
+### Students
+
+- `GET /api/students` - List all students
+- `GET /api/students/:id` - Get a specific student by ID
+- `POST /api/students` - Create a new student
+
+Example POST request:
+```bash
+curl -X POST http://localhost:8080/api/students \
+  -H "Content-Type: application/json" \
+  -d '{"name":"John Doe","email":"john@example.com","school_id":1}'
+```
+
+## Database Schema
+
+### Schools Table
+- `id` - Serial primary key
+- `name` - VARCHAR(255), required
+- `address` - TEXT, optional
+
+### Students Table
+- `id` - Serial primary key
+- `name` - VARCHAR(255), required
+- `email` - VARCHAR(255), required, unique
+- `school_id` - Foreign key to schools table, optional
+
+## Features
+
+- RESTful API with Axum web framework
+- PostgreSQL database with SQLx for type-safe queries
+- CORS enabled for cross-origin requests
+- Structured logging with tracing
+- Connection pooling for optimal performance
+- Health check on startup to verify database connectivity
+
+## Troubleshooting
+
+### Database Connection Issues
+
+If you see "password authentication failed", ensure:
+1. PostgreSQL is running: `sudo systemctl status postgresql`
+2. Password is set correctly: `sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"`
+3. `.env` file has the correct DATABASE_URL
+
+### Port Already in Use
+
+If port 8080 is already in use, you can change it in `src/main.rs`:
+```rust
+let addr = SocketAddr::from(([0, 0, 0, 0], 8080)); // Change 8080 to your preferred port
+```
