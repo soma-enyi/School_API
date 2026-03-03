@@ -4,28 +4,32 @@ use axum::{
 };
 use sqlx::PgPool;
 
-use crate::controllers::AuthController;
+use crate::controllers::{
+    register_admin, login_admin, register_student, login_student,
+    register_mentor, login_mentor, refresh_token, logout,
+    get_current_user, verify_token_endpoint
+};
 use crate::utils::JwtConfig;
 
 pub fn auth_routes(pool: PgPool, jwt_config: JwtConfig) -> Router {
     Router::new()
         // Admin authentication routes
-        .route("/admin/register", post(AuthController::register_admin))
-        .route("/admin/login", post(AuthController::login_admin))
+        .route("/admin/register", post(register_admin))
+        .route("/admin/login", post(login_admin))
         
         // Student authentication routes
-        .route("/student/register", post(AuthController::register_student))
-        .route("/student/login", post(AuthController::login_student))
+        .route("/student/register", post(register_student))
+        .route("/student/login", post(login_student))
         
         // Mentor authentication routes
-        .route("/mentor/register", post(AuthController::register_mentor))
-        .route("/mentor/login", post(AuthController::login_mentor))
+        .route("/mentor/register", post(register_mentor))
+        .route("/mentor/login", post(login_mentor))
         
         // Common authentication routes
-        .route("/refresh", post(AuthController::refresh_token))
-        .route("/logout", post(AuthController::logout))
-        .route("/me", get(AuthController::get_current_user))
-        .route("/verify", post(AuthController::verify_token_endpoint))
+        .route("/refresh", post(refresh_token))
+        .route("/logout", post(logout))
+        .route("/me", get(get_current_user))
+        .route("/verify", post(verify_token_endpoint))
         
         .with_state((pool, jwt_config))
 }

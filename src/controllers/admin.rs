@@ -12,11 +12,21 @@ use crate::utils::AuthError;
 
 pub struct AdminController;
 
-impl AdminController {
-    /// Get admin dashboard
-    /// GET /admin/dashboard
-    /// Requires: Admin role
-    pub async fn get_dashboard(
+/// Get admin dashboard
+#[utoipa::path(
+        get,
+        path = "/admin/dashboard",
+        tag = "Admin",
+        responses(
+            (status = 200, description = "Dashboard data retrieved successfully"),
+            (status = 401, description = "Unauthorized", body = crate::utils::ErrorResponse),
+            (status = 403, description = "Forbidden - Admin role required", body = crate::utils::ErrorResponse),
+        ),
+        security(
+            ("bearer_auth" = [])
+        )
+    )]
+pub async fn get_dashboard(
         admin: AdminUser,
     ) -> Result<impl IntoResponse, AuthError> {
         let response = json!({
@@ -34,13 +44,25 @@ impl AdminController {
             ]
         });
 
-        Ok((StatusCode::OK, Json(response)))
-    }
+    Ok((StatusCode::OK, Json(response)))
+}
 
-    /// Get all users (admin only)
-    /// GET /admin/users
-    /// Requires: Admin role
-    pub async fn get_all_users(
+/// Get all users
+#[utoipa::path(
+        get,
+        path = "/admin/users",
+        tag = "Admin",
+        responses(
+            (status = 200, description = "Users retrieved successfully"),
+            (status = 401, description = "Unauthorized", body = crate::utils::ErrorResponse),
+            (status = 403, description = "Forbidden", body = crate::utils::ErrorResponse),
+            (status = 500, description = "Internal server error", body = crate::utils::ErrorResponse),
+        ),
+        security(
+            ("bearer_auth" = [])
+        )
+    )]
+pub async fn get_all_users(
         admin: AdminUser,
         State(pool): State<PgPool>,
     ) -> Result<impl IntoResponse, AuthError> {
@@ -63,13 +85,24 @@ impl AdminController {
             }).collect::<Vec<_>>()
         });
 
-        Ok((StatusCode::OK, Json(response)))
-    }
+    Ok((StatusCode::OK, Json(response)))
+}
 
-    /// Get user statistics
-    /// GET /admin/statistics
-    /// Requires: Admin role
-    pub async fn get_statistics(
+/// Get user statistics
+#[utoipa::path(
+        get,
+        path = "/admin/statistics",
+        tag = "Admin",
+        responses(
+            (status = 200, description = "Statistics retrieved successfully"),
+            (status = 401, description = "Unauthorized", body = crate::utils::ErrorResponse),
+            (status = 403, description = "Forbidden", body = crate::utils::ErrorResponse),
+        ),
+        security(
+            ("bearer_auth" = [])
+        )
+    )]
+pub async fn get_statistics(
         admin: AdminUser,
         State(pool): State<PgPool>,
     ) -> Result<impl IntoResponse, AuthError> {
@@ -111,13 +144,28 @@ impl AdminController {
             }
         });
 
-        Ok((StatusCode::OK, Json(response)))
-    }
+    Ok((StatusCode::OK, Json(response)))
+}
 
-    /// Deactivate user (admin only)
-    /// POST /admin/users/:user_id/deactivate
-    /// Requires: Admin role
-    pub async fn deactivate_user(
+/// Deactivate user
+#[utoipa::path(
+        post,
+        path = "/admin/users/{user_id}/deactivate",
+        tag = "Admin",
+        params(
+            ("user_id" = String, Path, description = "User UUID to deactivate")
+        ),
+        responses(
+            (status = 200, description = "User deactivated successfully"),
+            (status = 401, description = "Unauthorized", body = crate::utils::ErrorResponse),
+            (status = 403, description = "Forbidden", body = crate::utils::ErrorResponse),
+            (status = 404, description = "User not found", body = crate::utils::ErrorResponse),
+        ),
+        security(
+            ("bearer_auth" = [])
+        )
+    )]
+pub async fn deactivate_user(
         admin: AdminUser,
         State(pool): State<PgPool>,
         axum::extract::Path(user_id): axum::extract::Path<String>,
@@ -136,13 +184,28 @@ impl AdminController {
             "deactivated_user_id": user_id
         });
 
-        Ok((StatusCode::OK, Json(response)))
-    }
+    Ok((StatusCode::OK, Json(response)))
+}
 
-    /// Activate user (admin only)
-    /// POST /admin/users/:user_id/activate
-    /// Requires: Admin role
-    pub async fn activate_user(
+/// Activate user
+#[utoipa::path(
+        post,
+        path = "/admin/users/{user_id}/activate",
+        tag = "Admin",
+        params(
+            ("user_id" = String, Path, description = "User UUID to activate")
+        ),
+        responses(
+            (status = 200, description = "User activated successfully"),
+            (status = 401, description = "Unauthorized", body = crate::utils::ErrorResponse),
+            (status = 403, description = "Forbidden", body = crate::utils::ErrorResponse),
+            (status = 404, description = "User not found", body = crate::utils::ErrorResponse),
+        ),
+        security(
+            ("bearer_auth" = [])
+        )
+    )]
+pub async fn activate_user(
         admin: AdminUser,
         State(pool): State<PgPool>,
         axum::extract::Path(user_id): axum::extract::Path<String>,
@@ -161,6 +224,5 @@ impl AdminController {
             "activated_user_id": user_id
         });
 
-        Ok((StatusCode::OK, Json(response)))
-    }
+    Ok((StatusCode::OK, Json(response)))
 }
