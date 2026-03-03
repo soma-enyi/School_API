@@ -12,11 +12,21 @@ use crate::utils::AuthError;
 
 pub struct StudentController;
 
-impl StudentController {
-    /// Get student dashboard
-    /// GET /student/dashboard
-    /// Requires: Student role
-    pub async fn get_dashboard(
+/// Get student dashboard
+#[utoipa::path(
+        get,
+        path = "/student/dashboard",
+        tag = "Student",
+        responses(
+            (status = 200, description = "Dashboard data retrieved successfully"),
+            (status = 401, description = "Unauthorized", body = crate::utils::ErrorResponse),
+            (status = 403, description = "Forbidden - Student role required", body = crate::utils::ErrorResponse),
+        ),
+        security(
+            ("bearer_auth" = [])
+        )
+    )]
+pub async fn get_dashboard(
         student: StudentUser,
     ) -> Result<impl IntoResponse, AuthError> {
         let response = json!({
@@ -33,13 +43,25 @@ impl StudentController {
             ]
         });
 
-        Ok((StatusCode::OK, Json(response)))
-    }
+    Ok((StatusCode::OK, Json(response)))
+}
 
-    /// Get student profile
-    /// GET /student/profile
-    /// Requires: Student role
-    pub async fn get_profile(
+/// Get student profile
+#[utoipa::path(
+        get,
+        path = "/student/profile",
+        tag = "Student",
+        responses(
+            (status = 200, description = "Profile retrieved successfully", body = crate::models::UserResponse),
+            (status = 401, description = "Unauthorized", body = crate::utils::ErrorResponse),
+            (status = 403, description = "Forbidden", body = crate::utils::ErrorResponse),
+            (status = 404, description = "User not found", body = crate::utils::ErrorResponse),
+        ),
+        security(
+            ("bearer_auth" = [])
+        )
+    )]
+pub async fn get_profile(
         student: StudentUser,
         State(pool): State<PgPool>,
     ) -> Result<impl IntoResponse, AuthError> {
@@ -60,13 +82,24 @@ impl StudentController {
             "role": user.4
         });
 
-        Ok((StatusCode::OK, Json(response)))
-    }
+    Ok((StatusCode::OK, Json(response)))
+}
 
-    /// Get enrolled courses
-    /// GET /student/courses
-    /// Requires: Student role
-    pub async fn get_courses(
+/// Get enrolled courses
+#[utoipa::path(
+        get,
+        path = "/student/courses",
+        tag = "Student",
+        responses(
+            (status = 200, description = "Courses retrieved successfully"),
+            (status = 401, description = "Unauthorized", body = crate::utils::ErrorResponse),
+            (status = 403, description = "Forbidden", body = crate::utils::ErrorResponse),
+        ),
+        security(
+            ("bearer_auth" = [])
+        )
+    )]
+pub async fn get_courses(
         student: StudentUser,
     ) -> Result<impl IntoResponse, AuthError> {
         let response = json!({
@@ -88,13 +121,29 @@ impl StudentController {
             ]
         });
 
-        Ok((StatusCode::OK, Json(response)))
-    }
+    Ok((StatusCode::OK, Json(response)))
+}
 
-    /// Submit assignment
-    /// POST /student/assignments/:assignment_id/submit
-    /// Requires: Student role
-    pub async fn submit_assignment(
+/// Submit assignment
+#[utoipa::path(
+        post,
+        path = "/student/assignments/{assignment_id}/submit",
+        tag = "Student",
+        params(
+            ("assignment_id" = String, Path, description = "Assignment UUID")
+        ),
+        responses(
+            (status = 201, description = "Assignment submitted successfully"),
+            (status = 400, description = "Invalid request data", body = crate::utils::ErrorResponse),
+            (status = 401, description = "Unauthorized", body = crate::utils::ErrorResponse),
+            (status = 403, description = "Forbidden", body = crate::utils::ErrorResponse),
+            (status = 404, description = "Assignment not found", body = crate::utils::ErrorResponse),
+        ),
+        security(
+            ("bearer_auth" = [])
+        )
+    )]
+pub async fn submit_assignment(
         student: StudentUser,
         axum::extract::Path(assignment_id): axum::extract::Path<String>,
         Json(_payload): Json<serde_json::Value>,
@@ -107,13 +156,24 @@ impl StudentController {
             "status": "pending_review"
         });
 
-        Ok((StatusCode::CREATED, Json(response)))
-    }
+    Ok((StatusCode::CREATED, Json(response)))
+}
 
-    /// Get grades
-    /// GET /student/grades
-    /// Requires: Student role
-    pub async fn get_grades(
+/// Get grades
+#[utoipa::path(
+        get,
+        path = "/student/grades",
+        tag = "Student",
+        responses(
+            (status = 200, description = "Grades retrieved successfully"),
+            (status = 401, description = "Unauthorized", body = crate::utils::ErrorResponse),
+            (status = 403, description = "Forbidden", body = crate::utils::ErrorResponse),
+        ),
+        security(
+            ("bearer_auth" = [])
+        )
+    )]
+pub async fn get_grades(
         student: StudentUser,
     ) -> Result<impl IntoResponse, AuthError> {
         let response = json!({
@@ -135,13 +195,25 @@ impl StudentController {
             ]
         });
 
-        Ok((StatusCode::OK, Json(response)))
-    }
+    Ok((StatusCode::OK, Json(response)))
+}
 
-    /// Message mentor
-    /// POST /student/messages/mentor
-    /// Requires: Student role
-    pub async fn message_mentor(
+/// Message mentor
+#[utoipa::path(
+        post,
+        path = "/student/messages/mentor",
+        tag = "Student",
+        responses(
+            (status = 201, description = "Message sent successfully"),
+            (status = 400, description = "Invalid request data", body = crate::utils::ErrorResponse),
+            (status = 401, description = "Unauthorized", body = crate::utils::ErrorResponse),
+            (status = 403, description = "Forbidden", body = crate::utils::ErrorResponse),
+        ),
+        security(
+            ("bearer_auth" = [])
+        )
+    )]
+pub async fn message_mentor(
         student: StudentUser,
         Json(_payload): Json<serde_json::Value>,
     ) -> Result<impl IntoResponse, AuthError> {
@@ -152,6 +224,5 @@ impl StudentController {
             "status": "sent"
         });
 
-        Ok((StatusCode::CREATED, Json(response)))
-    }
+    Ok((StatusCode::CREATED, Json(response)))
 }
