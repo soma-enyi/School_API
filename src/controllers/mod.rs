@@ -7,8 +7,5 @@ pub mod school;
 #[cfg(test)]
 mod tests;
 
+// Re-export only auth functions for convenience in route files
 pub use auth::*;
-pub use admin::*;
-pub use student::*;
-pub use mentor::*;
-pub use school::*;
