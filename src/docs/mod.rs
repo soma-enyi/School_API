@@ -14,6 +14,9 @@ use crate::docs::security::SecurityAddon;
         (url = "http://localhost:3000", description = "Development server")
     ),
     paths(
+        // Health check
+        crate::health_check,
+        
         // Auth endpoints
         crate::controllers::auth::register_admin,
         crate::controllers::auth::login_admin,
@@ -25,6 +28,10 @@ use crate::docs::security::SecurityAddon;
         crate::controllers::auth::logout,
         crate::controllers::auth::get_current_user,
         crate::controllers::auth::verify_token_endpoint,
+        
+        // OTP endpoints (from auth_controllers)
+        crate::controllers::auth_controllers::AuthController::verify_otp_login,
+        crate::controllers::auth_controllers::AuthController::resend_otp,
         
         // Admin endpoints
         crate::controllers::admin::get_dashboard,
@@ -70,6 +77,19 @@ use crate::docs::security::SecurityAddon;
             crate::models::AuthResponse,
             crate::models::RefreshTokenRequest,
             crate::models::TokenResponse,
+            
+            // Domain models
+            crate::models::student::Student,
+            crate::models::mentor::Mentor,
+            crate::models::school::School,
+            
+            // OTP models
+            crate::controllers::auth_controllers::OtpVerificationRequest,
+            crate::controllers::auth_controllers::ResendOtpRequest,
+            
+            // Service models
+            crate::services::EmailConfig,
+            crate::services::OtpRecord,
             
             // Error models
             crate::utils::ErrorResponse

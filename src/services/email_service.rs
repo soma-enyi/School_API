@@ -3,18 +3,40 @@ use lettre::transport::smtp::authentication::Credentials;
 use lettre::transport::smtp::SmtpTransport;
 use lettre::{Message, Transport};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::env;
 use tracing::{error, info};
+use utoipa::ToSchema;
 
 use crate::utils::AuthError;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Email configuration for SMTP server
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[schema(example = json!({
+    "smtp_host": "smtp.gmail.com",
+    "smtp_port": 587,
+    "smtp_username": "noreply@school.com",
+    "smtp_password": "********",
+    "from_email": "noreply@school.com",
+    "from_name": "School API"
+}))]
 pub struct EmailConfig {
+    #[schema(example = "smtp.gmail.com")]
     pub smtp_host: String,
+    
+    #[schema(example = 587)]
     pub smtp_port: u16,
+    
+    #[schema(example = "noreply@school.com", format = "email")]
     pub smtp_username: String,
+    
+    #[schema(example = "********", write_only)]
     pub smtp_password: String,
+    
+    #[schema(example = "noreply@school.com", format = "email")]
     pub from_email: String,
+    
+    #[schema(example = "School API")]
     pub from_name: String,
 }
 

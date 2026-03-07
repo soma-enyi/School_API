@@ -9,6 +9,7 @@ use crate::controllers::{
     register_mentor, login_mentor, refresh_token, logout,
     get_current_user, verify_token_endpoint
 };
+use crate::controllers::auth_controllers::AuthController;
 use crate::utils::JwtConfig;
 
 pub fn auth_routes(pool: PgPool, jwt_config: JwtConfig) -> Router {

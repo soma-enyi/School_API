@@ -1,19 +1,44 @@
 use chrono::{Duration, Utc};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sqlx::PgPool;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::utils::AuthError;
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+/// OTP record stored in database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, ToSchema)]
+#[schema(example = json!({
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "user_id": "660e8400-e29b-41d4-a716-446655440001",
+    "otp_code": "123456",
+    "otp_type": "login",
+    "is_used": false,
+    "created_at": "2024-01-15T10:30:00Z",
+    "expires_at": "2024-01-15T10:40:00Z"
+}))]
 pub struct OtpRecord {
+    #[schema(example = "550e8400-e29b-41d4-a716-446655440000", format = "uuid")]
     pub id: Uuid,
+    
+    #[schema(example = "660e8400-e29b-41d4-a716-446655440001", format = "uuid")]
     pub user_id: Uuid,
+    
+    #[schema(example = "123456", min_length = 6, max_length = 6)]
     pub otp_code: String,
+    
+    #[schema(example = "login", pattern = "^(login|password_reset|email_verification)$")]
     pub otp_type: String, // "login", "password_reset", "email_verification"
+    
+    #[schema(example = false)]
     pub is_used: bool,
+    
+    #[schema(example = "2024-01-15T10:30:00Z", format = "date-time")]
     pub created_at: chrono::DateTime<Utc>,
+    
+    #[schema(example = "2024-01-15T10:40:00Z", format = "date-time")]
     pub expires_at: chrono::DateTime<Utc>,
 }
 

@@ -6,6 +6,7 @@ use axum::{
 };
 use serde_json::json;
 use sqlx::PgPool;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::models::{
@@ -14,14 +15,27 @@ use crate::models::{
 use crate::services::{AuthService, EmailService, OtpService};
 use crate::utils::{AuthError, JwtConfig};
 
-#[derive(serde::Deserialize)]
+/// Request body for OTP verification
+#[derive(serde::Deserialize, ToSchema)]
+#[schema(example = json!({
+    "email": "admin@school.com",
+    "otp": "123456"
+}))]
 pub struct OtpVerificationRequest {
+    #[schema(example = "admin@school.com", format = "email")]
     pub email: String,
+    
+    #[schema(example = "123456", min_length = 6, max_length = 6)]
     pub otp: String,
 }
 
-#[derive(serde::Deserialize)]
+/// Request body for resending OTP
+#[derive(serde::Deserialize, ToSchema)]
+#[schema(example = json!({
+    "email": "admin@school.com"
+}))]
 pub struct ResendOtpRequest {
+    #[schema(example = "admin@school.com", format = "email")]
     pub email: String,
 }
 
@@ -104,6 +118,17 @@ impl AuthController {
 
     /// Verify OTP for login
     /// POST /auth/verify-otp
+    #[utoipa::path(
+        post,
+        path = "/auth/verify-otp",
+        tag = "Authentication",
+        request_body = OtpVerificationRequest,
+        responses(
+            (status = 200, description = "OTP verified successfully, returns authentication tokens", body = AuthResponse),
+            (status = 400, description = "Invalid OTP or expired", body = crate::utils::ErrorResponse),
+            (status = 404, description = "User not found", body = crate::utils::ErrorResponse),
+        )
+    )]
     pub async fn verify_otp_login(
         State((pool, jwt_config)): State<(PgPool, JwtConfig)>,
         Json(req): Json<OtpVerificationRequest>,
@@ -142,6 +167,17 @@ impl AuthController {
 
     /// Resend OTP
     /// POST /auth/resend-otp
+    #[utoipa::path(
+        post,
+        path = "/auth/resend-otp",
+        tag = "Authentication",
+        request_body = ResendOtpRequest,
+        responses(
+            (status = 200, description = "OTP resent successfully"),
+            (status = 404, description = "User not found", body = crate::utils::ErrorResponse),
+            (status = 500, description = "Failed to send email", body = crate::utils::ErrorResponse),
+        )
+    )]
     pub async fn resend_otp(
         State((pool, _jwt_config)): State<(PgPool, JwtConfig)>,
         Json(req): Json<ResendOtpRequest>,
