@@ -104,6 +104,21 @@ impl AuthService {
         .ok_or(AuthError::UserNotFound)
     }
 
+    /// Get user by email
+    pub async fn get_user_by_email(
+        pool: &PgPool,
+        email: &str,
+    ) -> Result<User, AuthError> {
+        sqlx::query_as::<_, User>(
+            "SELECT id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at FROM users WHERE email = $1"
+        )
+        .bind(email)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| AuthError::DatabaseError(e.to_string()))?
+        .ok_or(AuthError::UserNotFound)
+    }
+
     /// Verify refresh token and generate new access token
     pub async fn refresh_access_token(
         pool: &PgPool,

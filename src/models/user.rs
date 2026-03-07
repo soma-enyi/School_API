@@ -234,3 +234,14 @@ pub struct Claims {
     pub iat: i64,         // issued at
     pub token_type: String, // "access" or "refresh"
 }
+
+#[derive(Debug, Deserialize)]
+pub struct VerifyOtpRequest {
+    pub email: String,
+    pub otp_code: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResendOtpRequest {
+    pub email: String,
+}
