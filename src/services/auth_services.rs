@@ -22,7 +22,7 @@ impl AuthService {
 
         // Check if user already exists
         let existing_user = sqlx::query_as::<_, User>(
-            "SELECT id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at FROM users WHERE email = $1"
+            "SELECT id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at, status FROM users WHERE email = $1"
         )
         .bind(&req.email)
         .fetch_optional(pool)
@@ -42,9 +42,9 @@ impl AuthService {
 
         // Insert user into database
         let user = sqlx::query_as::<_, User>(
-            "INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-             RETURNING id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at"
+            "INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             RETURNING id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at, status"
         )
         .bind(user_id)
         .bind(&req.email)
@@ -55,6 +55,7 @@ impl AuthService {
         .bind(true)
         .bind(now)
         .bind(now)
+        .bind("pending")
         .fetch_one(pool)
         .await
         .map_err(|e| AuthError::DatabaseError(e.to_string()))?;
@@ -69,7 +70,7 @@ impl AuthService {
     ) -> Result<User, AuthError> {
         // Find user by email
         let user = sqlx::query_as::<_, User>(
-            "SELECT id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at FROM users WHERE email = $1"
+            "SELECT id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at, status FROM users WHERE email = $1"
         )
         .bind(&req.email)
         .fetch_optional(pool)
@@ -95,24 +96,9 @@ impl AuthService {
         user_id: Uuid,
     ) -> Result<User, AuthError> {
         sqlx::query_as::<_, User>(
-            "SELECT id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at FROM users WHERE id = $1"
+            "SELECT id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at, status FROM users WHERE id = $1"
         )
         .bind(user_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|e| AuthError::DatabaseError(e.to_string()))?
-        .ok_or(AuthError::UserNotFound)
-    }
-
-    /// Get user by email
-    pub async fn get_user_by_email(
-        pool: &PgPool,
-        email: &str,
-    ) -> Result<User, AuthError> {
-        sqlx::query_as::<_, User>(
-            "SELECT id, email, password_hash, first_name, last_name, role, is_active, created_at, updated_at FROM users WHERE email = $1"
-        )
-        .bind(email)
         .fetch_optional(pool)
         .await
         .map_err(|e| AuthError::DatabaseError(e.to_string()))?

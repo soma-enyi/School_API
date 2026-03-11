@@ -1,12 +1,8 @@
-pub mod auth;
-pub mod auth_controllers;
 pub mod admin;
-pub mod student;
+pub mod application;
+pub mod auth;
 pub mod mentor;
-pub mod school;
+pub mod student;
 
 #[cfg(test)]
 mod tests;
-
-// Re-export only auth functions for convenience in route files
-pub use auth::*;

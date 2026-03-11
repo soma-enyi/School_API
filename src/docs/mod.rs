@@ -6,65 +6,76 @@ use crate::docs::security::SecurityAddon;
 #[derive(utoipa::OpenApi)]
 #[openapi(
     info(
-        title = "School Management API",
+        title = "Course Flow API",
         version = "1.0.0",
-        description = "REST API for school management system with role-based access control"
+        description = "REST API for course flow management system with role-based access control"
     ),
     servers(
         (url = "http://localhost:3000", description = "Development server")
     ),
     paths(
-        // Health check
-        crate::health_check,
-        
+        // Health
+        crate::routes::health::health_check,
+
         // Auth endpoints
-        crate::controllers::auth::register_admin,
-        crate::controllers::auth::login_admin,
-        crate::controllers::auth::register_student,
-        crate::controllers::auth::login_student,
-        crate::controllers::auth::register_mentor,
-        crate::controllers::auth::login_mentor,
-        crate::controllers::auth::refresh_token,
-        crate::controllers::auth::logout,
-        crate::controllers::auth::get_current_user,
-        crate::controllers::auth::verify_token_endpoint,
-        
-        // OTP endpoints (from auth_controllers)
-        crate::controllers::auth_controllers::AuthController::verify_otp_login,
-        crate::controllers::auth_controllers::AuthController::resend_otp,
+        crate::routes::auth_routes::register_admin,
+        crate::routes::auth_routes::login_admin,
+        crate::routes::auth_routes::register_student,
+        crate::routes::auth_routes::login_student,
+        crate::routes::auth_routes::register_mentor,
+        crate::routes::auth_routes::login_mentor,
+        crate::routes::auth_routes::refresh_token,
+        crate::routes::auth_routes::logout,
+        crate::routes::auth_routes::get_current_user,
+        crate::routes::auth_routes::verify_token_endpoint,
         
         // Admin endpoints
-        crate::controllers::admin::get_dashboard,
-        crate::controllers::admin::get_all_users,
-        crate::controllers::admin::get_statistics,
-        crate::controllers::admin::deactivate_user,
-        crate::controllers::admin::activate_user,
+        crate::routes::admin_routes::admin_dashboard,
+        crate::routes::admin_routes::list_students,
+        crate::routes::admin_routes::get_student,
+        crate::routes::admin_routes::waitlist_student,
+        crate::routes::admin_routes::accept_student,
+        crate::routes::admin_routes::reject_student,
+        crate::routes::admin_routes::list_mentors,
+        crate::routes::admin_routes::get_mentor,
+        crate::routes::admin_routes::update_mentor,
+        crate::routes::admin_routes::delete_mentor,
+        crate::routes::admin_routes::accept_mentor,
+        crate::routes::admin_routes::reject_mentor,
+        crate::routes::admin_routes::create_course,
+        crate::routes::admin_routes::list_courses,
+        crate::routes::admin_routes::update_course,
+        crate::routes::admin_routes::delete_course,
         
-        // School endpoints
-        crate::controllers::school::get_all_schools,
-        crate::controllers::school::get_school_details,
-        crate::controllers::school::create_school,
-        crate::controllers::school::update_school,
-        crate::controllers::school::delete_school,
-        crate::controllers::school::get_school_statistics,
+        // Application review (admin)
+        crate::routes::admin_routes::list_applications,
+        crate::routes::admin_routes::get_application,
+        crate::routes::admin_routes::accept_application,
+        crate::routes::admin_routes::waitlist_application,
+        crate::routes::admin_routes::enroll_application,
+        crate::routes::admin_routes::reject_application,
+        
+        // Public application
+        crate::routes::application_routes::submit_application,
+        crate::routes::application_routes::list_available_courses,
         
         // Student endpoints
-        crate::controllers::student::get_dashboard,
-        crate::controllers::student::get_profile,
-        crate::controllers::student::get_courses,
-        crate::controllers::student::submit_assignment,
-        crate::controllers::student::get_grades,
-        crate::controllers::student::message_mentor,
+        crate::routes::student_routes::get_dashboard,
+        crate::routes::student_routes::get_profile,
+        crate::routes::student_routes::get_courses,
+        crate::routes::student_routes::submit_assignment,
+        crate::routes::student_routes::get_grades,
+        crate::routes::student_routes::message_mentor,
         
         // Mentor endpoints
-        crate::controllers::mentor::get_dashboard,
-        crate::controllers::mentor::get_profile,
-        crate::controllers::mentor::get_students,
-        crate::controllers::mentor::get_student_progress,
-        crate::controllers::mentor::grade_assignment,
-        crate::controllers::mentor::create_assignment,
-        crate::controllers::mentor::message_student,
-        crate::controllers::mentor::get_course_assignments
+        crate::routes::mentor_routes::get_dashboard,
+        crate::routes::mentor_routes::get_profile,
+        crate::routes::mentor_routes::get_students,
+        crate::routes::mentor_routes::get_student_progress,
+        crate::routes::mentor_routes::grade_assignment,
+        crate::routes::mentor_routes::create_assignment,
+        crate::routes::mentor_routes::message_student,
+        crate::routes::mentor_routes::get_course_assignments
     ),
     components(
         schemas(
@@ -78,18 +89,15 @@ use crate::docs::security::SecurityAddon;
             crate::models::RefreshTokenRequest,
             crate::models::TokenResponse,
             
-            // Domain models
-            crate::models::student::Student,
-            crate::models::mentor::Mentor,
-            crate::models::school::School,
+            // Course models
+            crate::models::Course,
+            crate::models::CourseResponse,
+            crate::models::CreateCourseRequest,
+            crate::models::UpdateCourseRequest,
             
-            // OTP models
-            crate::controllers::auth_controllers::OtpVerificationRequest,
-            crate::controllers::auth_controllers::ResendOtpRequest,
-            
-            // Service models
-            crate::services::EmailConfig,
-            crate::services::OtpRecord,
+            // Application models
+            crate::models::ApplicationRequest,
+            crate::models::ApplicationResponse,
             
             // Error models
             crate::utils::ErrorResponse
@@ -97,11 +105,11 @@ use crate::docs::security::SecurityAddon;
     ),
     tags(
         (name = "Health", description = "Health check endpoints"),
+        (name = "Applications", description = "Public course application endpoints"),
         (name = "Authentication", description = "User authentication and authorization"),
         (name = "Admin", description = "Administrative operations (admin role required)"),
         (name = "Student", description = "Student operations (student role required)"),
-        (name = "Mentor", description = "Mentor operations (mentor role required)"),
-        (name = "School", description = "School management operations")
+        (name = "Mentor", description = "Mentor operations (mentor role required)")
     ),
     modifiers(&SecurityAddon)
 )]

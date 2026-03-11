@@ -1,5 +1,5 @@
 [package]
-name = "school-backend"
+name = "course-flow-backend"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,13 @@ edition = "2021"
 axum = "0.7"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "macros", "uuid", "chrono"] }
+sqlx = { version = "0.8", features = [
+    "postgres",
+    "runtime-tokio-rustls",
+    "macros",
+    "uuid",
+    "chrono",
+] }
 tokio = { version = "1", features = ["full"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["cors"] }
@@ -19,11 +25,14 @@ chrono = { version = "0.4", features = ["serde"] }
 jsonwebtoken = "9.0"
 bcrypt = "0.15"
 thiserror = "1.0"
+lettre = { version = "0.11", features = [
+    "tokio1-native-tls",
+    "builder",
+    "smtp-transport",
+] }
+rand = "0.8"
 utoipa = { version = "4.2", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-swagger-ui = { version = "6.0", features = ["axum"] }
-lettre = "0.11"
-rand = "0.8"
 
 [dev-dependencies]
 proptest = "1.4"
-

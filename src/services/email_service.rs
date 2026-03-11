@@ -1,42 +1,21 @@
 use lettre::message::MultiPart;
 use lettre::transport::smtp::authentication::Credentials;
-use lettre::transport::smtp::SmtpTransport;
+use lettre::transport::smtp::client::{Tls, TlsParameters};
+use lettre::SmtpTransport;
 use lettre::{Message, Transport};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::env;
 use tracing::{error, info};
-use utoipa::ToSchema;
 
 use crate::utils::AuthError;
 
-/// Email configuration for SMTP server
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[schema(example = json!({
-    "smtp_host": "smtp.gmail.com",
-    "smtp_port": 587,
-    "smtp_username": "noreply@school.com",
-    "smtp_password": "********",
-    "from_email": "noreply@school.com",
-    "from_name": "School API"
-}))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmailConfig {
-    #[schema(example = "smtp.gmail.com")]
     pub smtp_host: String,
-    
-    #[schema(example = 587)]
     pub smtp_port: u16,
-    
-    #[schema(example = "noreply@school.com", format = "email")]
     pub smtp_username: String,
-    
-    #[schema(example = "********", write_only)]
     pub smtp_password: String,
-    
-    #[schema(example = "noreply@school.com", format = "email")]
     pub from_email: String,
-    
-    #[schema(example = "School API")]
     pub from_name: String,
 }
 
@@ -97,17 +76,25 @@ impl EmailService {
             .map_err(|_| AuthError::InternalServerError)?;
 
         let creds = Credentials::new(
-            self.config.smtp_username.clone().into(),
-            self.config.smtp_password.clone().into(),
+            self.config.smtp_username.clone(),
+            self.config.smtp_password.clone(),
         );
 
-        let mailer = SmtpTransport::relay(&self.config.smtp_host)
+        // Use STARTTLS for port 587 (Mailtrap and most SMTP services)
+        let tls_params = TlsParameters::new(self.config.smtp_host.clone())
+            .map_err(|e| {
+                error!("TLS parameters error: {}", e);
+                AuthError::InternalServerError
+            })?;
+
+        let mailer = SmtpTransport::starttls_relay(&self.config.smtp_host)
             .map_err(|e| {
                 error!("SMTP relay error: {}", e);
                 AuthError::InternalServerError
             })?
             .port(self.config.smtp_port)
             .credentials(creds)
+            .tls(Tls::Required(tls_params))
             .build();
 
         mailer.send(&message).map_err(|e| {
@@ -119,48 +106,6 @@ impl EmailService {
         Ok(())
     }
 
-    /// Send OTP email
-    pub async fn send_otp_email(
-        &self,
-        to_email: &str,
-        otp: &str,
-        user_name: &str,
-    ) -> Result<(), AuthError> {
-        let subject = "Your OTP for School API";
-        let html_body = EmailTemplate::otp_email(user_name, otp);
-        let text_body = format!(
-            "Hello {},\n\nYour OTP is: {}\n\nThis OTP will expire in 10 minutes.\n\nBest regards,\nSchool API Team",
-            user_name, otp
-        );
-
-        self.send_email(to_email, subject, &html_body, &text_body)
-            .await
-    }
-
-    /// Send password reset email
-    pub async fn send_password_reset_email(
-        &self,
-        to_email: &str,
-        reset_token: &str,
-        user_name: &str,
-    ) -> Result<(), AuthError> {
-        let subject = "Password Reset Request";
-        let reset_link = format!(
-            "{}?token={}",
-            env::var("RESET_PASSWORD_URL")
-                .unwrap_or_else(|_| "https://school.com/reset-password".to_string()),
-            reset_token
-        );
-        let html_body = EmailTemplate::password_reset_email(user_name, &reset_link);
-        let text_body = format!(
-            "Hello {},\n\nClick the link below to reset your password:\n{}\n\nThis link will expire in 1 hour.\n\nBest regards,\nSchool API Team",
-            user_name, reset_link
-        );
-
-        self.send_email(to_email, subject, &html_body, &text_body)
-            .await
-    }
-
     /// Send welcome email
     pub async fn send_welcome_email(
         &self,
@@ -168,10 +113,10 @@ impl EmailService {
         user_name: &str,
         role: &str,
     ) -> Result<(), AuthError> {
-        let subject = "Welcome to School API";
+        let subject = "Welcome to CourseFlow!";
         let html_body = EmailTemplate::welcome_email(user_name, role);
         let text_body = format!(
-            "Hello {},\n\nWelcome to School API! Your account has been created with role: {}.\n\nBest regards,\nSchool API Team",
+            "Hello {},\n\nWelcome to CourseFlow! Your account has been created with role: {}.\n\nBest regards,\nCourseFlow Team",
             user_name, role
         );
 
@@ -179,28 +124,78 @@ impl EmailService {
             .await
     }
 
-    /// Send account verification email
-    pub async fn send_verification_email(
+    // ─── Application Pipeline Emails ───
+
+    /// Interview invitation email
+    pub async fn send_interview_invitation(
         &self,
         to_email: &str,
-        verification_token: &str,
-        user_name: &str,
+        applicant_name: &str,
+        course_name: &str,
+        interview_venue: &str,
     ) -> Result<(), AuthError> {
-        let subject = "Verify Your Email Address";
-        let verify_link = format!(
-            "{}?token={}",
-            env::var("VERIFY_EMAIL_URL")
-                .unwrap_or_else(|_| "https://school.com/verify-email".to_string()),
-            verification_token
-        );
-        let html_body = EmailTemplate::verification_email(user_name, &verify_link);
+        let subject = format!("CourseFlow: Interview Invitation for {}", course_name);
+        let html_body = EmailTemplate::interview_invitation(applicant_name, course_name, interview_venue);
         let text_body = format!(
-            "Hello {},\n\nClick the link below to verify your email:\n{}\n\nThis link will expire in 24 hours.\n\nBest regards,\nSchool API Team",
-            user_name, verify_link
+            "Hello {},\n\nCongratulations! Your application for {} has been reviewed and we would like to invite you for an interview.\n\nInterview Venue: {}\n\nPlease check your email for further scheduling details.\n\nBest regards,\nCourseFlow Admissions Team",
+            applicant_name, course_name, interview_venue
         );
 
-        self.send_email(to_email, subject, &html_body, &text_body)
-            .await
+        self.send_email(to_email, &subject, &html_body, &text_body).await
+    }
+
+    /// Waitlist notification email
+    pub async fn send_waitlist_notification(
+        &self,
+        to_email: &str,
+        applicant_name: &str,
+        course_name: &str,
+    ) -> Result<(), AuthError> {
+        let subject = format!("CourseFlow: You're on the Waitlist for {}", course_name);
+        let html_body = EmailTemplate::waitlist_notification(applicant_name, course_name);
+        let text_body = format!(
+            "Hello {},\n\nGreat news! After your interview, you have been added to the waitlist for {}.\n\nWe will notify you as soon as a spot becomes available.\n\nBest regards,\nCourseFlow Team",
+            applicant_name, course_name
+        );
+
+        self.send_email(to_email, &subject, &html_body, &text_body).await
+    }
+
+    /// Enrollment acceptance email (with temp password)
+    pub async fn send_enrollment_acceptance(
+        &self,
+        to_email: &str,
+        applicant_name: &str,
+        course_name: &str,
+        temp_password: &str,
+    ) -> Result<(), AuthError> {
+        let subject = format!("CourseFlow: Welcome to {}!", course_name);
+        let login_url = env::var("LOGIN_URL")
+            .unwrap_or_else(|_| "https://courseflow.com/login".to_string());
+        let html_body = EmailTemplate::enrollment_acceptance(applicant_name, course_name, temp_password, &login_url);
+        let text_body = format!(
+            "Hello {},\n\nCongratulations! You have been accepted and enrolled in {}.\n\nYour account has been created:\n  Email: {}\n  Temporary Password: {}\n\nPlease log in at {} and change your password immediately.\n\nBest regards,\nCourseFlow Team",
+            applicant_name, course_name, to_email, temp_password, login_url
+        );
+
+        self.send_email(to_email, &subject, &html_body, &text_body).await
+    }
+
+    /// Rejection email
+    pub async fn send_rejection_email(
+        &self,
+        to_email: &str,
+        applicant_name: &str,
+        course_name: &str,
+    ) -> Result<(), AuthError> {
+        let subject = format!("CourseFlow: Update on Your {} Application", course_name);
+        let html_body = EmailTemplate::rejection_email(applicant_name, course_name);
+        let text_body = format!(
+            "Hello {},\n\nThank you for your interest in {}. After careful consideration, we regret to inform you that we are unable to offer you a place in this cohort.\n\nWe encourage you to apply again in the future.\n\nBest regards,\nCourseFlow Team",
+            applicant_name, course_name
+        );
+
+        self.send_email(to_email, &subject, &html_body, &text_body).await
     }
 }
 
@@ -208,87 +203,6 @@ impl EmailService {
 pub struct EmailTemplate;
 
 impl EmailTemplate {
-    pub fn otp_email(user_name: &str, otp: &str) -> String {
-        format!(
-            r#"
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; }}
-        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; }}
-        .header {{ background-color: #2c3e50; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
-        .content {{ padding: 20px; }}
-        .otp-box {{ background-color: #ecf0f1; padding: 15px; text-align: center; border-radius: 5px; margin: 20px 0; }}
-        .otp-code {{ font-size: 32px; font-weight: bold; color: #2c3e50; letter-spacing: 5px; }}
-        .footer {{ background-color: #ecf0f1; padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d; border-radius: 0 0 8px 8px; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>School API</h1>
-        </div>
-        <div class="content">
-            <p>Hello <strong>{}</strong>,</p>
-            <p>Your One-Time Password (OTP) for authentication is:</p>
-            <div class="otp-box">
-                <div class="otp-code">{}</div>
-            </div>
-            <p><strong>Important:</strong> This OTP will expire in 10 minutes. Do not share this code with anyone.</p>
-            <p>If you did not request this OTP, please ignore this email.</p>
-        </div>
-        <div class="footer">
-            <p>&copy; 2026 School API. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>
-            "#,
-            user_name, otp
-        )
-    }
-
-    pub fn password_reset_email(user_name: &str, reset_link: &str) -> String {
-        format!(
-            r#"
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; }}
-        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; }}
-        .header {{ background-color: #e74c3c; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
-        .content {{ padding: 20px; }}
-        .button {{ display: inline-block; background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
-        .footer {{ background-color: #ecf0f1; padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d; border-radius: 0 0 8px 8px; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Password Reset Request</h1>
-        </div>
-        <div class="content">
-            <p>Hello <strong>{}</strong>,</p>
-            <p>We received a request to reset your password. Click the button below to proceed:</p>
-            <a href="{}" class="button">Reset Password</a>
-            <p><strong>Important:</strong> This link will expire in 1 hour.</p>
-            <p>If you did not request a password reset, please ignore this email and your password will remain unchanged.</p>
-        </div>
-        <div class="footer">
-            <p>&copy; 2026 School API. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>
-            "#,
-            user_name, reset_link
-        )
-    }
-
     pub fn welcome_email(user_name: &str, role: &str) -> String {
         format!(
             r#"
@@ -297,28 +211,29 @@ impl EmailTemplate {
 <head>
     <meta charset="UTF-8">
     <style>
-        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; }}
-        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; }}
-        .header {{ background-color: #27ae60; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
-        .content {{ padding: 20px; }}
-        .role-badge {{ display: inline-block; background-color: #3498db; color: white; padding: 8px 15px; border-radius: 20px; margin: 10px 0; }}
-        .footer {{ background-color: #ecf0f1; padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d; border-radius: 0 0 8px 8px; }}
+        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+        .header {{ background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 30px; text-align: center; }}
+        .header h1 {{ margin: 0; font-size: 28px; }}
+        .content {{ padding: 30px; }}
+        .role-badge {{ display: inline-block; background-color: #11998e; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 10px 0; }}
+        .footer {{ background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Welcome to School API</h1>
+            <h1>Welcome to CourseFlow</h1>
         </div>
         <div class="content">
             <p>Hello <strong>{}</strong>,</p>
             <p>Your account has been successfully created!</p>
             <p>Your Role: <span class="role-badge">{}</span></p>
-            <p>You can now log in to your account and start using School API.</p>
+            <p>You can now log in to your account and start using CourseFlow.</p>
             <p>If you have any questions, please contact our support team.</p>
         </div>
         <div class="footer">
-            <p>&copy; 2026 School API. All rights reserved.</p>
+            <p>&copy; 2026 CourseFlow. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -328,7 +243,9 @@ impl EmailTemplate {
         )
     }
 
-    pub fn verification_email(user_name: &str, verify_link: &str) -> String {
+    // ─── Application Pipeline Templates ───
+
+    pub fn interview_invitation(applicant_name: &str, course_name: &str, interview_venue: &str) -> String {
         format!(
             r#"
 <!DOCTYPE html>
@@ -336,34 +253,185 @@ impl EmailTemplate {
 <head>
     <meta charset="UTF-8">
     <style>
-        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; }}
-        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; }}
-        .header {{ background-color: #9b59b6; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
-        .content {{ padding: 20px; }}
-        .button {{ display: inline-block; background-color: #27ae60; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
-        .footer {{ background-color: #ecf0f1; padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d; border-radius: 0 0 8px 8px; }}
+        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }}
+        .header h1 {{ margin: 0; font-size: 28px; }}
+        .content {{ padding: 30px; }}
+        .course-badge {{ display: inline-block; background-color: #667eea; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 15px 0; }}
+        .venue-box {{ background-color: #f0f4ff; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0; }}
+        .venue-box .label {{ font-size: 12px; text-transform: uppercase; color: #667eea; font-weight: bold; letter-spacing: 1px; margin-bottom: 8px; }}
+        .venue-box .venue {{ font-size: 16px; font-weight: bold; color: #333; }}
+        .highlight {{ background-color: #fff8e1; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; margin: 20px 0; }}
+        .footer {{ background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Verify Your Email Address</h1>
+            <h1>Congratulations!</h1>
+            <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">You've been invited for an interview</p>
         </div>
         <div class="content">
             <p>Hello <strong>{}</strong>,</p>
-            <p>Thank you for signing up! Please verify your email address by clicking the button below:</p>
-            <a href="{}" class="button">Verify Email</a>
-            <p><strong>Important:</strong> This link will expire in 24 hours.</p>
-            <p>If you did not create this account, please ignore this email.</p>
+            <p>We are thrilled to inform you that your application for <span class="course-badge">{}</span> has been reviewed and accepted! We would love to invite you for an interview.</p>
+            <div class="venue-box">
+                <div class="label">Interview Venue</div>
+                <div class="venue">{}</div>
+            </div>
+            <div class="highlight">
+                <strong>What to expect:</strong><br>
+                Our admissions team will reach out to you with the exact date and time. Please keep an eye on your inbox for scheduling details.
+            </div>
+            <p>We look forward to meeting you!</p>
+            <p>Best regards,<br><strong>CourseFlow Admissions Team</strong></p>
         </div>
         <div class="footer">
-            <p>&copy; 2026 School API. All rights reserved.</p>
+            <p>&copy; 2026 CourseFlow. All rights reserved.</p>
         </div>
     </div>
 </body>
 </html>
             "#,
-            user_name, verify_link
+            applicant_name, course_name, interview_venue
+        )
+    }
+
+    pub fn waitlist_notification(applicant_name: &str, course_name: &str) -> String {
+        format!(
+            r#"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+        .header {{ background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; }}
+        .header h1 {{ margin: 0; font-size: 28px; }}
+        .content {{ padding: 30px; }}
+        .course-badge {{ display: inline-block; background-color: #f5576c; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 15px 0; }}
+        .status-box {{ background-color: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; margin: 20px 0; }}
+        .footer {{ background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>You're on the Waitlist!</h1>
+        </div>
+        <div class="content">
+            <p>Hello <strong>{}</strong>,</p>
+            <p>Great news! After your interview, you have been added to the waitlist for <span class="course-badge">{}</span>.</p>
+            <div class="status-box">
+                <strong>What does this mean?</strong><br>
+                You've passed the interview stage! We will notify you as soon as a spot becomes available in the course.
+            </div>
+            <p>Thank you for your patience. We appreciate your interest in CourseFlow!</p>
+            <p>Best regards,<br><strong>CourseFlow Admissions Team</strong></p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 CourseFlow. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+            "#,
+            applicant_name, course_name
+        )
+    }
+
+    pub fn enrollment_acceptance(applicant_name: &str, course_name: &str, temp_password: &str, login_url: &str) -> String {
+        format!(
+            r#"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+        .header {{ background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 30px; text-align: center; }}
+        .header h1 {{ margin: 0; font-size: 28px; }}
+        .content {{ padding: 30px; }}
+        .course-badge {{ display: inline-block; background-color: #11998e; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 15px 0; }}
+        .credentials-box {{ background-color: #e8f5e9; padding: 20px; border-radius: 8px; border-left: 4px solid #4caf50; margin: 20px 0; }}
+        .credentials-box code {{ background-color: #c8e6c9; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 16px; }}
+        .warning {{ color: #d32f2f; font-weight: bold; }}
+        .button {{ display: inline-block; background-color: #11998e; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; margin: 20px 0; font-weight: bold; }}
+        .footer {{ background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to CourseFlow!</h1>
+        </div>
+        <div class="content">
+            <p>Hello <strong>{}</strong>,</p>
+            <p>Congratulations! You have been accepted and enrolled in <span class="course-badge">{}</span>.</p>
+            <div class="credentials-box">
+                <strong>Your Account Credentials:</strong><br><br>
+                <strong>Temporary Password:</strong> <code>{}</code>
+            </div>
+            <p class="warning">Please change your password immediately after your first login.</p>
+            <a href="{}" class="button">Log In Now</a>
+            <p>We're excited to have you on board!</p>
+            <p>Best regards,<br><strong>CourseFlow Team</strong></p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 CourseFlow. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+            "#,
+            applicant_name, course_name, temp_password, login_url
+        )
+    }
+
+    pub fn rejection_email(applicant_name: &str, course_name: &str) -> String {
+        format!(
+            r#"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+        .header {{ background: linear-gradient(135deg, #606c88 0%, #3f4c6b 100%); color: white; padding: 30px; text-align: center; }}
+        .header h1 {{ margin: 0; font-size: 28px; }}
+        .content {{ padding: 30px; }}
+        .course-badge {{ display: inline-block; background-color: #606c88; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 15px 0; }}
+        .encourage-box {{ background-color: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 4px solid #2196f3; margin: 20px 0; }}
+        .footer {{ background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Application Update</h1>
+        </div>
+        <div class="content">
+            <p>Hello <strong>{}</strong>,</p>
+            <p>Thank you for your interest in <span class="course-badge">{}</span> and for taking the time to apply.</p>
+            <p>After careful review, we regret to inform you that we are unable to offer you a place in this cohort.</p>
+            <div class="encourage-box">
+                <strong>Don't give up!</strong><br>
+                We encourage you to continue developing your skills and to apply again for future cohorts. Many successful students applied multiple times before being accepted.
+            </div>
+            <p>We wish you the best in your learning journey!</p>
+            <p>Best regards,<br><strong>CourseFlow Admissions Team</strong></p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 CourseFlow. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+            "#,
+            applicant_name, course_name
         )
     }
 }
