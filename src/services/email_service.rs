@@ -113,10 +113,10 @@ impl EmailService {
         user_name: &str,
         role: &str,
     ) -> Result<(), AuthError> {
-        let subject = "Welcome to CourseFlow!";
+        let subject = "Welcome to BuidlFlow!";
         let html_body = EmailTemplate::welcome_email(user_name, role);
         let text_body = format!(
-            "Hello {},\n\nWelcome to CourseFlow! Your account has been created with role: {}.\n\nBest regards,\nCourseFlow Team",
+            "Hello {},\n\nWelcome to BuidlFlow! Your account has been created with role: {}.\n\nBest regards,\nCourseFlow Team",
             user_name, role
         );
 
@@ -134,7 +134,7 @@ impl EmailService {
         course_name: &str,
         interview_venue: &str,
     ) -> Result<(), AuthError> {
-        let subject = format!("CourseFlow: Interview Invitation for {}", course_name);
+        let subject = format!("BuidlFlow: Interview Invitation for {}", course_name);
         let html_body = EmailTemplate::interview_invitation(applicant_name, course_name, interview_venue);
         let text_body = format!(
             "Hello {},\n\nCongratulations! Your application for {} has been reviewed and we would like to invite you for an interview.\n\nInterview Venue: {}\n\nPlease check your email for further scheduling details.\n\nBest regards,\nCourseFlow Admissions Team",
@@ -151,7 +151,7 @@ impl EmailService {
         applicant_name: &str,
         course_name: &str,
     ) -> Result<(), AuthError> {
-        let subject = format!("CourseFlow: You're on the Waitlist for {}", course_name);
+        let subject = format!("BuidlFlow: You're on the Waitlist for {}", course_name);
         let html_body = EmailTemplate::waitlist_notification(applicant_name, course_name);
         let text_body = format!(
             "Hello {},\n\nGreat news! After your interview, you have been added to the waitlist for {}.\n\nWe will notify you as soon as a spot becomes available.\n\nBest regards,\nCourseFlow Team",
@@ -169,7 +169,7 @@ impl EmailService {
         course_name: &str,
         temp_password: &str,
     ) -> Result<(), AuthError> {
-        let subject = format!("CourseFlow: Welcome to {}!", course_name);
+        let subject = format!("BuidlFlow: Welcome to {}!", course_name);
         let login_url = env::var("LOGIN_URL")
             .unwrap_or_else(|_| "https://courseflow.com/login".to_string());
         let html_body = EmailTemplate::enrollment_acceptance(applicant_name, course_name, temp_password, &login_url);
@@ -188,7 +188,7 @@ impl EmailService {
         applicant_name: &str,
         course_name: &str,
     ) -> Result<(), AuthError> {
-        let subject = format!("CourseFlow: Update on Your {} Application", course_name);
+        let subject = format!("BuidlFlow: Update on Your {} Application", course_name);
         let html_body = EmailTemplate::rejection_email(applicant_name, course_name);
         let text_body = format!(
             "Hello {},\n\nThank you for your interest in {}. After careful consideration, we regret to inform you that we are unable to offer you a place in this cohort.\n\nWe encourage you to apply again in the future.\n\nBest regards,\nCourseFlow Team",
@@ -202,6 +202,7 @@ impl EmailService {
 /// Email template generator
 pub struct EmailTemplate;
 
+
 impl EmailTemplate {
     pub fn welcome_email(user_name: &str, role: &str) -> String {
         format!(
@@ -211,29 +212,38 @@ impl EmailTemplate {
 <head>
     <meta charset="UTF-8">
     <style>
-        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
-        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-        .header {{ background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 30px; text-align: center; }}
-        .header h1 {{ margin: 0; font-size: 28px; }}
-        .content {{ padding: 30px; }}
-        .role-badge {{ display: inline-block; background-color: #11998e; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 10px 0; }}
-        .footer {{ background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }}
+        body {{ font-family: 'Courier New', Courier, monospace; background-color: #ffffff; margin: 0; padding: 40px 20px; color: #1a1a1a; }}
+        .container {{ max-width: 560px; margin: 0 auto; }}
+        .header {{ border: 2px solid #1a1a1a; padding: 30px; margin-bottom: 30px; }}
+        .header .label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 8px; }}
+        .header h1 {{ margin: 0; font-size: 26px; font-weight: bold; }}
+        .header p {{ margin: 10px 0 0; font-size: 14px; color: #444; }}
+        .content {{ padding: 0 4px; font-size: 14px; line-height: 1.8; }}
+        .info-box {{ border: 1px solid #1a1a1a; padding: 20px; margin: 20px 0; }}
+        .info-box .label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 6px; }}
+        .info-box .value {{ font-size: 15px; font-weight: bold; }}
+        .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 1px; }}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Welcome to CourseFlow</h1>
+            <div class="label">Welcome</div>
+            <h1>Welcome to BuidlFlow</h1>
+            <p>Your account has been successfully created.</p>
         </div>
         <div class="content">
             <p>Hello <strong>{}</strong>,</p>
-            <p>Your account has been successfully created!</p>
-            <p>Your Role: <span class="role-badge">{}</span></p>
-            <p>You can now log in to your account and start using CourseFlow.</p>
+            <div class="info-box">
+                <div class="label">Your Role</div>
+                <div class="value">{}</div>
+            </div>
+            <p>You can now log in to your account and start using BuidlFlow.</p>
             <p>If you have any questions, please contact our support team.</p>
+            <p>Best regards,<br><strong>BuidlFlow Team</strong></p>
         </div>
         <div class="footer">
-            <p>&copy; 2026 CourseFlow. All rights reserved.</p>
+            &copy; 2026 BuidlFlow. All rights reserved.
         </div>
     </div>
 </body>
@@ -253,41 +263,41 @@ impl EmailTemplate {
 <head>
     <meta charset="UTF-8">
     <style>
-        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
-        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }}
-        .header h1 {{ margin: 0; font-size: 28px; }}
-        .content {{ padding: 30px; }}
-        .course-badge {{ display: inline-block; background-color: #667eea; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 15px 0; }}
-        .venue-box {{ background-color: #f0f4ff; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0; }}
-        .venue-box .label {{ font-size: 12px; text-transform: uppercase; color: #667eea; font-weight: bold; letter-spacing: 1px; margin-bottom: 8px; }}
-        .venue-box .venue {{ font-size: 16px; font-weight: bold; color: #333; }}
-        .highlight {{ background-color: #fff8e1; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; margin: 20px 0; }}
-        .footer {{ background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }}
+        body {{ font-family: 'Courier New', Courier, monospace; background-color: #ffffff; margin: 0; padding: 40px 20px; color: #1a1a1a; }}
+        .container {{ max-width: 560px; margin: 0 auto; }}
+        .header {{ border: 2px solid #1a1a1a; padding: 30px; margin-bottom: 30px; }}
+        .header .label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 8px; }}
+        .header h1 {{ margin: 0; font-size: 26px; font-weight: bold; }}
+        .header p {{ margin: 10px 0 0; font-size: 14px; color: #444; }}
+        .content {{ padding: 0 4px; font-size: 14px; line-height: 1.8; }}
+        .info-box {{ border: 1px solid #1a1a1a; padding: 20px; margin: 20px 0; }}
+        .info-box .label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 6px; }}
+        .info-box .value {{ font-size: 15px; font-weight: bold; }}
+        .note-box {{ border: 1px solid #ccc; padding: 20px; margin: 20px 0; background-color: #fafafa; }}
+        .note-box .label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 6px; }}
+        .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 1px; }}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
+            <div class="label">Interview Invitation</div>
             <h1>Congratulations!</h1>
-            <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">You've been invited for an interview</p>
+            <p>You've been invited for an interview.</p>
         </div>
         <div class="content">
             <p>Hello <strong>{}</strong>,</p>
-            <p>We are thrilled to inform you that your application for <span class="course-badge">{}</span> has been reviewed and accepted! We would love to invite you for an interview.</p>
-            <div class="venue-box">
+            <p>We are pleased to inform you that your application for <strong>{}</strong> has been reviewed and accepted. We would like to invite you for an interview.</p>
+            <div class="info-box">
                 <div class="label">Interview Venue</div>
-                <div class="venue">{}</div>
+                <div class="value">{}</div>
             </div>
-            <div class="highlight">
-                <strong>What to expect:</strong><br>
-                Our admissions team will reach out to you with the exact date and time. Please keep an eye on your inbox for scheduling details.
-            </div>
-            <p>We look forward to meeting you!</p>
-            <p>Best regards,<br><strong>CourseFlow Admissions Team</strong></p>
+
+            <p>We look forward to meeting you.</p>
+            <p>Best regards,<br><strong>BuidlFlow Admissions Team</strong></p>
         </div>
         <div class="footer">
-            <p>&copy; 2026 CourseFlow. All rights reserved.</p>
+            &copy; 2026 BuidlFlow. All rights reserved.
         </div>
     </div>
 </body>
@@ -305,33 +315,37 @@ impl EmailTemplate {
 <head>
     <meta charset="UTF-8">
     <style>
-        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
-        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-        .header {{ background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; }}
-        .header h1 {{ margin: 0; font-size: 28px; }}
-        .content {{ padding: 30px; }}
-        .course-badge {{ display: inline-block; background-color: #f5576c; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 15px 0; }}
-        .status-box {{ background-color: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; margin: 20px 0; }}
-        .footer {{ background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }}
+        body {{ font-family: 'Courier New', Courier, monospace; background-color: #ffffff; margin: 0; padding: 40px 20px; color: #1a1a1a; }}
+        .container {{ max-width: 560px; margin: 0 auto; }}
+        .header {{ border: 2px solid #1a1a1a; padding: 30px; margin-bottom: 30px; }}
+        .header .label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 8px; }}
+        .header h1 {{ margin: 0; font-size: 26px; font-weight: bold; }}
+        .header p {{ margin: 10px 0 0; font-size: 14px; color: #444; }}
+        .content {{ padding: 0 4px; font-size: 14px; line-height: 1.8; }}
+        .note-box {{ border: 1px solid #ccc; padding: 20px; margin: 20px 0; background-color: #fafafa; }}
+        .note-box .label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 6px; }}
+        .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 1px; }}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>You're on the Waitlist!</h1>
+            <div class="label">Application Update</div>
+            <h1>You're on the Waitlist</h1>
+            <p>Great news — you've passed the interview stage.</p>
         </div>
         <div class="content">
             <p>Hello <strong>{}</strong>,</p>
-            <p>Great news! After your interview, you have been added to the waitlist for <span class="course-badge">{}</span>.</p>
-            <div class="status-box">
-                <strong>What does this mean?</strong><br>
-                You've passed the interview stage! We will notify you as soon as a spot becomes available in the course.
+            <p>After your interview, you have been added to the waitlist for <strong>{}</strong>.</p>
+            <div class="note-box">
+                <div class="label">What does this mean?</div>
+                <p style="margin: 6px 0 0;">You've passed the interview stage. We will notify you as soon as a spot becomes available in the course.</p>
             </div>
-            <p>Thank you for your patience. We appreciate your interest in CourseFlow!</p>
-            <p>Best regards,<br><strong>CourseFlow Admissions Team</strong></p>
+            <p>Thank you for your patience. We appreciate your interest in BuidlFlow.</p>
+            <p>Best regards,<br><strong>BuidlFlow Admissions Team</strong></p>
         </div>
         <div class="footer">
-            <p>&copy; 2026 CourseFlow. All rights reserved.</p>
+            &copy; 2026 BuidlFlow. All rights reserved.
         </div>
     </div>
 </body>
@@ -349,38 +363,42 @@ impl EmailTemplate {
 <head>
     <meta charset="UTF-8">
     <style>
-        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
-        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-        .header {{ background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 30px; text-align: center; }}
-        .header h1 {{ margin: 0; font-size: 28px; }}
-        .content {{ padding: 30px; }}
-        .course-badge {{ display: inline-block; background-color: #11998e; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 15px 0; }}
-        .credentials-box {{ background-color: #e8f5e9; padding: 20px; border-radius: 8px; border-left: 4px solid #4caf50; margin: 20px 0; }}
-        .credentials-box code {{ background-color: #c8e6c9; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 16px; }}
-        .warning {{ color: #d32f2f; font-weight: bold; }}
-        .button {{ display: inline-block; background-color: #11998e; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; margin: 20px 0; font-weight: bold; }}
-        .footer {{ background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }}
+        body {{ font-family: 'Courier New', Courier, monospace; background-color: #ffffff; margin: 0; padding: 40px 20px; color: #1a1a1a; }}
+        .container {{ max-width: 560px; margin: 0 auto; }}
+        .header {{ border: 2px solid #1a1a1a; padding: 30px; margin-bottom: 30px; }}
+        .header .label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 8px; }}
+        .header h1 {{ margin: 0; font-size: 26px; font-weight: bold; }}
+        .header p {{ margin: 10px 0 0; font-size: 14px; color: #444; }}
+        .content {{ padding: 0 4px; font-size: 14px; line-height: 1.8; }}
+        .info-box {{ border: 1px solid #1a1a1a; padding: 20px; margin: 20px 0; }}
+        .info-box .label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 6px; }}
+        .info-box .value {{ font-size: 15px; font-weight: bold; font-family: 'Courier New', Courier, monospace; }}
+        .warning {{ font-size: 13px; color: #666; font-style: italic; margin: 15px 0; }}
+        .button {{ display: inline-block; border: 2px solid #1a1a1a; color: #1a1a1a; padding: 12px 28px; text-decoration: none; font-weight: bold; font-family: 'Courier New', Courier, monospace; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0; }}
+        .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 1px; }}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Welcome to CourseFlow!</h1>
+            <div class="label">Enrollment Confirmed</div>
+            <h1>Welcome to BuidlFlow</h1>
+            <p>You've been accepted and enrolled.</p>
         </div>
         <div class="content">
             <p>Hello <strong>{}</strong>,</p>
-            <p>Congratulations! You have been accepted and enrolled in <span class="course-badge">{}</span>.</p>
-            <div class="credentials-box">
-                <strong>Your Account Credentials:</strong><br><br>
-                <strong>Temporary Password:</strong> <code>{}</code>
+            <p>Congratulations! You have been accepted and enrolled in <strong>{}</strong>.</p>
+            <div class="info-box">
+                <div class="label">Your Temporary Password</div>
+                <div class="value">{}</div>
             </div>
             <p class="warning">Please change your password immediately after your first login.</p>
             <a href="{}" class="button">Log In Now</a>
-            <p>We're excited to have you on board!</p>
-            <p>Best regards,<br><strong>CourseFlow Team</strong></p>
+            <p>We're excited to have you on board.</p>
+            <p>Best regards,<br><strong>BuidlFlow Team</strong></p>
         </div>
         <div class="footer">
-            <p>&copy; 2026 CourseFlow. All rights reserved.</p>
+            &copy; 2026 BuidlFlow. All rights reserved.
         </div>
     </div>
 </body>
@@ -398,34 +416,38 @@ impl EmailTemplate {
 <head>
     <meta charset="UTF-8">
     <style>
-        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
-        .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-        .header {{ background: linear-gradient(135deg, #606c88 0%, #3f4c6b 100%); color: white; padding: 30px; text-align: center; }}
-        .header h1 {{ margin: 0; font-size: 28px; }}
-        .content {{ padding: 30px; }}
-        .course-badge {{ display: inline-block; background-color: #606c88; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 15px 0; }}
-        .encourage-box {{ background-color: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 4px solid #2196f3; margin: 20px 0; }}
-        .footer {{ background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }}
+        body {{ font-family: 'Courier New', Courier, monospace; background-color: #ffffff; margin: 0; padding: 40px 20px; color: #1a1a1a; }}
+        .container {{ max-width: 560px; margin: 0 auto; }}
+        .header {{ border: 2px solid #1a1a1a; padding: 30px; margin-bottom: 30px; }}
+        .header .label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 8px; }}
+        .header h1 {{ margin: 0; font-size: 26px; font-weight: bold; }}
+        .header p {{ margin: 10px 0 0; font-size: 14px; color: #444; }}
+        .content {{ padding: 0 4px; font-size: 14px; line-height: 1.8; }}
+        .note-box {{ border: 1px solid #ccc; padding: 20px; margin: 20px 0; background-color: #fafafa; }}
+        .note-box .label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 6px; }}
+        .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 1px; }}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Application Update</h1>
+            <div class="label">Application Update</div>
+            <h1>Application Status</h1>
+            <p>An update on your application.</p>
         </div>
         <div class="content">
             <p>Hello <strong>{}</strong>,</p>
-            <p>Thank you for your interest in <span class="course-badge">{}</span> and for taking the time to apply.</p>
+            <p>Thank you for your interest in <strong>{}</strong> and for taking the time to apply.</p>
             <p>After careful review, we regret to inform you that we are unable to offer you a place in this cohort.</p>
-            <div class="encourage-box">
-                <strong>Don't give up!</strong><br>
-                We encourage you to continue developing your skills and to apply again for future cohorts. Many successful students applied multiple times before being accepted.
+            <div class="note-box">
+                <div class="label">Don't give up</div>
+                <p style="margin: 6px 0 0;">We encourage you to continue developing your skills and to apply again for future cohorts. Many successful students applied multiple times before being accepted.</p>
             </div>
-            <p>We wish you the best in your learning journey!</p>
-            <p>Best regards,<br><strong>CourseFlow Admissions Team</strong></p>
+            <p>We wish you the best in your learning journey.</p>
+            <p>Best regards,<br><strong>BuidlFlow Admissions Team</strong></p>
         </div>
         <div class="footer">
-            <p>&copy; 2026 CourseFlow. All rights reserved.</p>
+            &copy; 2026 BuidlFlow. All rights reserved.
         </div>
     </div>
 </body>

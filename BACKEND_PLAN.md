@@ -11,7 +11,7 @@
 | **ORM / Queries**  | SQLx                           |
 | **Auth**           | JWT (jsonwebtoken crate)       |
 | **Password Hashing** | argon2                       |
-| **Email**          | Lettre                         |
+| **Email**          | mailtrap                         |
 | **Serialization**  | Serde                          |
 | **Validation**     | validator crate                |
 | **File Uploads**   | axum-multipart                 |
