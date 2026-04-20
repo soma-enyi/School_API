@@ -60,6 +60,8 @@ pub fn admin_routes() -> Router<AppState> {
         // Course management
         .route("/courses", get(list_courses).post(create_course))
         .route("/courses/:id", put(update_course).delete(delete_course))
+        // Dropout alerts
+        .route("/dropout-alerts/process", axum::routing::post(process_dropout_alerts))
 }
 
 // ─── Dashboard Handler ───
@@ -601,4 +603,34 @@ pub async fn reject_application(
             "application": application
         })),
     ))
+}
+
+// ─── Dropout Alerts Handler ───
+
+/// Manually trigger dropout alert emails for students with 3+ absences or 2+ missed submissions
+#[utoipa::path(
+    post,
+    path = "/admin/dropout-alerts/process",
+    tag = "Admin",
+    responses(
+        (status = 200, description = "Dropout alerts processed successfully"),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+        (status = 500, description = "Internal server error"),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn process_dropout_alerts(
+    _admin: AdminUser,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, AuthError> {
+    let scheduler = crate::services::SchedulerService::new(
+        state.pool.clone(),
+        state.email_service.clone(),
+    );
+    scheduler
+        .process_dropout_alerts()
+        .await
+        .map_err(|_| AuthError::InternalServerError)?;
+    Ok((StatusCode::OK, Json(json!({ "message": "Dropout alerts processed successfully" }))))
 }

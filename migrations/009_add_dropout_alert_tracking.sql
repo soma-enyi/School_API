@@ -1,0 +1,3 @@
+ALTER TABLE course_enrollments
+ADD COLUMN IF NOT EXISTS absence_alert_sent           BOOLEAN NOT NULL DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS missed_submission_alert_sent BOOLEAN NOT NULL DEFAULT FALSE;

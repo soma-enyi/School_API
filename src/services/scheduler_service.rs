@@ -26,6 +26,9 @@ impl SchedulerService {
             if let Err(e) = self.process_class_reminders().await {
                 tracing::error!("Scheduler error (class reminders): {:?}", e);
             }
+            if let Err(e) = self.process_dropout_alerts().await {
+                tracing::error!("Scheduler error (dropout alerts): {:?}", e);
+            }
 
             sleep(Duration::from_secs(60)).await;
         }
@@ -167,9 +170,122 @@ impl SchedulerService {
         tx.commit().await?;
         Ok(())
     }
+    // ─── Dropout Alerts ───
+
+    pub async fn process_dropout_alerts(&self) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+
+        // Students with 3+ absences not yet alerted
+        let absence_cases = sqlx::query_as::<_, DropoutAlert>(
+            r#"
+            SELECT ce.id AS enrollment_id,
+                   u.email,
+                   u.first_name || ' ' || u.last_name AS name,
+                   c.name AS course_name,
+                   'Missed 3 or more classes' AS reason
+            FROM course_enrollments ce
+            JOIN users u ON u.id = ce.user_id
+            JOIN courses c ON c.id = ce.course_id
+            WHERE ce.role = 'student'
+              AND ce.absence_alert_sent = FALSE
+              AND (
+                  SELECT COUNT(*) FROM attendance a
+                  WHERE a.student_id = ce.user_id
+                    AND a.course_id = ce.course_id
+                    AND a.status = FALSE
+              ) >= 3
+            FOR UPDATE OF ce SKIP LOCKED
+            LIMIT 50
+            "#,
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+
+        // Students with 2+ missed assignment submissions not yet alerted
+        let submission_cases = sqlx::query_as::<_, DropoutAlert>(
+            r#"
+            SELECT ce.id AS enrollment_id,
+                   u.email,
+                   u.first_name || ' ' || u.last_name AS name,
+                   c.name AS course_name,
+                   'Failed to submit 2 or more assignments' AS reason
+            FROM course_enrollments ce
+            JOIN users u ON u.id = ce.user_id
+            JOIN courses c ON c.id = ce.course_id
+            WHERE ce.role = 'student'
+              AND ce.missed_submission_alert_sent = FALSE
+              AND (
+                  SELECT COUNT(*) FROM assignments a
+                  WHERE a.course_id = ce.course_id
+                    AND a.due_date < NOW()
+                    AND NOT EXISTS (
+                        SELECT 1 FROM assignment_submissions s
+                        WHERE s.assignment_id = a.id
+                          AND s.student_id = ce.user_id
+                    )
+              ) >= 2
+            FOR UPDATE OF ce SKIP LOCKED
+            LIMIT 50
+            "#,
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+
+        for alert in &absence_cases {
+            if let Some(ref svc) = self.email_service {
+                let html = EmailTemplate::course_dropout_alert(&alert.name, &alert.course_name, &alert.reason);
+                let text = format!(
+                    "Hello {},\n\nYou have been dropped from {} due to: {}.\n\nPlease contact your administrator if you have questions.\n\nBuidlFlow Team",
+                    alert.name, alert.course_name, alert.reason
+                );
+                if let Err(e) = svc.send_email(&alert.email, "Important: You Have Been Dropped from a Course", &html, &text).await {
+                    tracing::error!("Failed to send absence dropout alert to {}: {:?}", alert.email, e);
+                    continue;
+                }
+            } else {
+                continue;
+            }
+            sqlx::query("UPDATE course_enrollments SET absence_alert_sent = TRUE WHERE id = $1")
+                .bind(alert.enrollment_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        for alert in &submission_cases {
+            if let Some(ref svc) = self.email_service {
+                let html = EmailTemplate::course_dropout_alert(&alert.name, &alert.course_name, &alert.reason);
+                let text = format!(
+                    "Hello {},\n\nYou have been dropped from {} due to: {}.\n\nPlease contact your administrator if you have questions.\n\nBuidlFlow Team",
+                    alert.name, alert.course_name, alert.reason
+                );
+                if let Err(e) = svc.send_email(&alert.email, "Important: You Have Been Dropped from a Course", &html, &text).await {
+                    tracing::error!("Failed to send submission dropout alert to {}: {:?}", alert.email, e);
+                    continue;
+                }
+            } else {
+                continue;
+            }
+            sqlx::query("UPDATE course_enrollments SET missed_submission_alert_sent = TRUE WHERE id = $1")
+                .bind(alert.enrollment_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        tx.commit().await?;
+        Ok(())
+    }
 }
 
 // ─── Internal query structs ───
+
+#[derive(Debug, FromRow)]
+struct DropoutAlert {
+    enrollment_id: Uuid,
+    email: String,
+    name: String,
+    course_name: String,
+    reason: String,
+}
 
 #[derive(Debug, FromRow)]
 struct Application {

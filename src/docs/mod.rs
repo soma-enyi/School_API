@@ -46,6 +46,7 @@ use crate::docs::security::SecurityAddon;
         crate::routes::admin_routes::list_courses,
         crate::routes::admin_routes::update_course,
         crate::routes::admin_routes::delete_course,
+        crate::routes::admin_routes::process_dropout_alerts,
         
         // Application review (admin)
         crate::routes::admin_routes::list_applications,

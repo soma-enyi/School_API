@@ -603,6 +603,59 @@ impl EmailTemplate {
         )
     }
 
+    pub fn course_dropout_alert(student_name: &str, course_name: &str, reason: &str) -> String {
+        format!(
+            r#"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: 'Courier New', Courier, monospace; background-color: #ffffff; margin: 0; padding: 40px 20px; color: #1a1a1a; }}
+        .container {{ max-width: 560px; margin: 0 auto; }}
+        .header {{ border: 2px solid #c0392b; padding: 30px; margin-bottom: 30px; }}
+        .header .label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #c0392b; margin-bottom: 8px; }}
+        .header h1 {{ margin: 0; font-size: 26px; font-weight: bold; }}
+        .header p {{ margin: 10px 0 0; font-size: 14px; color: #444; }}
+        .content {{ padding: 0 4px; font-size: 14px; line-height: 1.8; }}
+        .info-box {{ border: 1px solid #c0392b; padding: 20px; margin: 20px 0; }}
+        .info-box .label {{ font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 6px; }}
+        .info-box .value {{ font-size: 15px; font-weight: bold; }}
+        .footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 1px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="label">Important Notice</div>
+            <h1>You Have Been Dropped</h1>
+            <p>Your enrollment in a course has been terminated.</p>
+        </div>
+        <div class="content">
+            <p>Hello <strong>{}</strong>,</p>
+            <p>We regret to inform you that you have been <strong>dropped from the following course</strong>:</p>
+            <div class="info-box">
+                <div class="label">Course</div>
+                <div class="value">{}</div>
+            </div>
+            <div class="info-box">
+                <div class="label">Reason</div>
+                <div class="value">{}</div>
+            </div>
+            <p>If you believe this is an error or would like to discuss this further, please contact your administrator.</p>
+            <p>Best regards,<br><strong>BuidlFlow Team</strong></p>
+        </div>
+        <div class="footer">
+            &copy; 2026 BuidlFlow. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>
+            "#,
+            student_name, course_name, reason
+        )
+    }
+
     pub fn rejection_email(applicant_name: &str, course_name: &str) -> String {
         format!(
             r#"
