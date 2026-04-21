@@ -1,6 +1,7 @@
 use axum::{
     extract::Request,
     middleware,
+    response::Json,
     routing::get,
     Router,
 };
@@ -20,6 +21,10 @@ use crate::routes::newsletter_routes::newsletter_routes;
 use crate::state::AppState;
 use crate::utils::JwtConfig;
 
+async fn openapi_json() -> Json<utoipa::openapi::OpenApi> {
+    Json(ApiDoc::openapi())
+}
+
 /// Build the full application Router with all routes, middleware, and state.
 pub fn build_app(pool: PgPool) -> Router {
     // Create application state (includes email service)
@@ -33,6 +38,8 @@ pub fn build_app(pool: PgPool) -> Router {
     // Admin routes — protected by auth middleware, uses AppState (for email)
     let admin_protected = Router::new()
         .nest("/admin", admin_routes())
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .route("/api-docs/openapi.json", get(openapi_json))
         .layer(middleware::from_fn(move |req: Request, next| {
             let jwt_config = jwt_config_for_admin.clone();
             async move {
@@ -70,11 +77,6 @@ pub fn build_app(pool: PgPool) -> Router {
         // Protected routes
         .merge(admin_protected)
         .merge(student_mentor_protected)
-        // Swagger UI
-        .merge(
-            SwaggerUi::new("/swagger-ui")
-                .url("/api-docs/openapi.json", ApiDoc::openapi()),
-        )
         // CORS
         .layer(CorsLayer::permissive())
 }
