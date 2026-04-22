@@ -2,11 +2,15 @@ use axum::{
     body::Body,
     http::{Request, Response, StatusCode, header},
     middleware::Next,
+    response::IntoResponse,
+    Form,
 };
-use base64::{engine::general_purpose, Engine};
+use serde::Deserialize;
 
 const SWAGGER_USERNAME: &str = "admin";
 const SWAGGER_PASSWORD: &str = "swagger123";
+const SESSION_COOKIE: &str = "swagger_session";
+const SESSION_TOKEN: &str = "swagger_authenticated";
 
 const LOGIN_HTML: &str = r#"<!DOCTYPE html>
 <html>
@@ -41,28 +45,69 @@ const LOGIN_HTML: &str = r#"<!DOCTYPE html>
   <script>
     document.getElementById('loginForm').addEventListener('submit', function(e) {
       e.preventDefault();
-      const u = encodeURIComponent(document.getElementById('username').value);
-      const p = encodeURIComponent(document.getElementById('password').value);
-      const url = window.location.protocol + '//' + u + ':' + p + '@' + window.location.host + window.location.pathname;
-      // Validate first, then navigate
-      fetch(window.location.href, {
-        headers: { 'Authorization': 'Basic ' + btoa(decodeURIComponent(u) + ':' + decodeURIComponent(p)) }
-      }).then(r => {
-        if (r.ok) {
-          window.location.href = url;
-        } else {
-          document.getElementById('error').style.display = 'block';
-        }
+      const body = new URLSearchParams({
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value,
       });
+      fetch('/swagger-login', { method: 'POST', body, credentials: 'same-origin' })
+        .then(r => {
+          if (r.ok) {
+            window.location.href = '/swagger-ui/';
+          } else {
+            document.getElementById('error').style.display = 'block';
+          }
+        });
     });
   </script>
 </body>
 </html>"#;
 
+#[derive(Deserialize)]
+pub struct LoginForm {
+    username: String,
+    password: String,
+}
+
+pub async fn swagger_login_handler(Form(form): Form<LoginForm>) -> impl IntoResponse {
+    if form.username == SWAGGER_USERNAME && form.password == SWAGGER_PASSWORD {
+        Response::builder()
+            .status(StatusCode::OK)
+            .header(
+                header::SET_COOKIE,
+                format!(
+                    "{}={}; Path=/; HttpOnly; SameSite=Strict",
+                    SESSION_COOKIE, SESSION_TOKEN
+                ),
+            )
+            .body(Body::empty())
+            .unwrap()
+    } else {
+        Response::builder()
+            .status(StatusCode::UNAUTHORIZED)
+            .body(Body::empty())
+            .unwrap()
+    }
+}
+
 pub async fn swagger_basic_auth(req: Request<Body>, next: Next) -> Response<Body> {
+    // Check session cookie
+    if let Some(cookie_header) = req.headers().get(header::COOKIE) {
+        if let Ok(cookies) = cookie_header.to_str() {
+            let authenticated = cookies.split(';').any(|c| {
+                let c = c.trim();
+                c == format!("{}={}", SESSION_COOKIE, SESSION_TOKEN)
+            });
+            if authenticated {
+                return next.run(req).await;
+            }
+        }
+    }
+
+    // Fallback: Basic Auth header (for programmatic access)
     if let Some(auth_header) = req.headers().get(header::AUTHORIZATION) {
         if let Ok(auth_str) = auth_header.to_str() {
             if let Some(encoded) = auth_str.strip_prefix("Basic ") {
+                use base64::{engine::general_purpose, Engine};
                 if let Ok(decoded) = general_purpose::STANDARD.decode(encoded) {
                     if let Ok(credentials) = std::str::from_utf8(&decoded) {
                         if credentials == format!("{}:{}", SWAGGER_USERNAME, SWAGGER_PASSWORD) {

@@ -7,4 +7,4 @@ mod tests;
 
 pub use auth_middleware::*;
 pub use extractors::*;
-pub use swagger_auth::swagger_basic_auth;
+pub use swagger_auth::{swagger_basic_auth, swagger_login_handler};
