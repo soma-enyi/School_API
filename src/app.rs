@@ -11,7 +11,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::docs::ApiDoc;
-use crate::middlewares::{auth_middleware, swagger_basic_auth};
+use crate::middlewares::{auth_middleware, swagger_basic_auth, swagger_login_handler};
 use crate::routes::admin_routes::admin_routes;
 use crate::routes::auth_routes::auth_routes;
 use crate::routes::application_routes::application_routes;
@@ -35,11 +35,15 @@ pub fn build_app(pool: PgPool) -> Router {
     let jwt_config_for_admin = jwt_config.clone();
     let jwt_config_for_pool_routes = jwt_config.clone();
 
-    // Swagger UI — protected by HTTP Basic Auth
+    // Swagger UI — protected by cookie-based session auth
     let swagger_routes = Router::new()
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
-        .route("/api-docs/openapi.json", get(openapi_json))
-        .layer(middleware::from_fn(swagger_basic_auth));
+        .route("/swagger-login", axum::routing::post(swagger_login_handler))
+        .merge(
+            Router::new()
+                .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+                .route("/api-docs/openapi.json", get(openapi_json))
+                .layer(middleware::from_fn(swagger_basic_auth)),
+        );
 
     // Admin routes — protected by auth middleware, uses AppState (for email)
     let admin_protected = Router::new()
