@@ -81,7 +81,21 @@ use crate::docs::security::SecurityAddon;
         crate::routes::mentor_routes::grade_assignment,
         crate::routes::mentor_routes::create_assignment,
         crate::routes::mentor_routes::message_student,
-        crate::routes::mentor_routes::get_course_assignments
+        crate::routes::mentor_routes::get_course_assignments,
+
+        // Attendance endpoints
+        crate::routes::attendance_routes::create_session,
+        crate::routes::attendance_routes::list_sessions,
+        crate::routes::attendance_routes::generate_qr,
+        crate::routes::attendance_routes::mark,
+        crate::routes::attendance_routes::get_by_date,
+        crate::routes::attendance_routes::get_summary,
+        crate::routes::attendance_routes::session_report,
+        crate::routes::attendance_routes::checkin_pin,
+        crate::routes::attendance_routes::checkin_qr,
+        crate::routes::attendance_routes::checkin_login,
+        crate::routes::attendance_routes::get_by_student,
+        crate::routes::attendance_routes::set_pin
     ),
     components(
         schemas(
@@ -112,7 +126,20 @@ use crate::docs::security::SecurityAddon;
             crate::services::newsletter_service::SubscribeRequest,
             crate::services::newsletter_service::UnsubscribeRequest,
             crate::services::newsletter_service::SendNewsletterRequest,
-            crate::services::newsletter_service::SubscriberResponse
+            crate::services::newsletter_service::SubscriberResponse,
+
+            // Attendance models
+            crate::models::attendance::Attendance,
+            crate::models::attendance::MarkAttendanceRequest,
+            crate::models::attendance::ClassSession,
+            crate::models::attendance::CreateSessionRequest,
+            crate::models::attendance::QrCode,
+            crate::models::attendance::PinCheckInRequest,
+            crate::models::attendance::QrCheckInRequest,
+            crate::models::attendance::LoginCheckInRequest,
+            crate::models::attendance::SetPinRequest,
+            crate::models::attendance::AttendanceSummary,
+            crate::models::attendance::SessionAttendanceReport
         )
     ),
     tags(
@@ -122,7 +149,8 @@ use crate::docs::security::SecurityAddon;
         (name = "Admin", description = "Administrative operations (admin role required)"),
         (name = "Student", description = "Student operations (student role required)"),
         (name = "Mentor", description = "Mentor operations (mentor role required)"),
-        (name = "Newsletter", description = "Newsletter subscribe/unsubscribe and send")
+        (name = "Newsletter", description = "Newsletter subscribe/unsubscribe and send"),
+        (name = "Attendance", description = "Class sessions, self-check-in (PIN/QR/login), and attendance reports")
     ),
     modifiers(&SecurityAddon)
 )]
