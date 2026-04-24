@@ -15,6 +15,7 @@ use crate::middlewares::{auth_middleware, swagger_basic_auth, swagger_login_hand
 use crate::routes::admin_routes::admin_routes;
 use crate::routes::auth_routes::auth_routes;
 use crate::routes::application_routes::application_routes;
+use crate::routes::attendance_routes::attendance_routes;
 use crate::routes::student_routes::student_routes;
 use crate::routes::mentor_routes::mentor_routes;
 use crate::routes::newsletter_routes::newsletter_routes;
@@ -62,6 +63,7 @@ pub fn build_app(pool: PgPool) -> Router {
     let student_mentor_protected = Router::new()
         .merge(student_routes())
         .merge(mentor_routes())
+        .merge(attendance_routes())
         .layer(middleware::from_fn(move |req: Request, next| {
             let jwt_config = jwt_config_for_pool_routes.clone();
             async move {

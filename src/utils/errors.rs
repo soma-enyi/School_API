@@ -68,6 +68,12 @@ pub enum AuthError {
 
     #[error("Internal server error")]
     InternalServerError,
+
+    #[error("Sign-in window has closed")]
+    SignInClosed,
+
+    #[error("Sign-in window not yet open")]
+    SignInNotOpen,
 }
 
 impl IntoResponse for AuthError {
@@ -83,6 +89,8 @@ impl IntoResponse for AuthError {
             AuthError::InvalidRole => (StatusCode::BAD_REQUEST, "BadRequest", "Invalid role"),
             AuthError::DatabaseError(ref msg) => (StatusCode::INTERNAL_SERVER_ERROR, "InternalServerError", msg.as_str()),
             AuthError::InternalServerError => (StatusCode::INTERNAL_SERVER_ERROR, "InternalServerError", "Internal server error"),
+            AuthError::SignInClosed => (StatusCode::FORBIDDEN, "SignInClosed", "Sign-in window has closed (cutoff is 10:15 AM)"),
+            AuthError::SignInNotOpen => (StatusCode::FORBIDDEN, "SignInNotOpen", "Sign-in window is not yet open (opens at 8:00 AM)"),
         };
 
         let error_response = ErrorResponse::new(error_type, error_message);
