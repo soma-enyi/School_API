@@ -162,6 +162,31 @@ pub struct RegisterRequest {
 
 #[derive(Debug, Deserialize, ToSchema)]
 #[schema(example = json!({
+    "email": "mentor@school.com",
+    "password": "SecurePass123!",
+    "first_name": "Jane",
+    "last_name": "Smith",
+    "course_id": "550e8400-e29b-41d4-a716-446655440001"
+}))]
+pub struct MentorRegisterRequest {
+    #[schema(example = "mentor@school.com", format = "email")]
+    pub email: String,
+    
+    #[schema(example = "SecurePass123!", min_length = 8)]
+    pub password: String,
+    
+    #[schema(example = "Jane")]
+    pub first_name: String,
+    
+    #[schema(example = "Smith")]
+    pub last_name: String,
+    
+    #[schema(example = "550e8400-e29b-41d4-a716-446655440001", format = "uuid")]
+    pub course_id: Uuid,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[schema(example = json!({
     "email": "user@school.com",
     "password": "SecurePass123!"
 }))]

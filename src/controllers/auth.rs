@@ -2,7 +2,7 @@ use serde_json::{json, Value};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::{AuthResponse, LoginRequest, RegisterRequest, UserResponse};
+use crate::models::{AuthResponse, LoginRequest, RegisterRequest, MentorRegisterRequest, UserResponse};
 use crate::services::AuthService;
 use crate::utils::{AuthError, JwtConfig};
 
@@ -32,6 +32,39 @@ pub async fn register_user(
         token_type: "Bearer".to_string(),
         expires_in: jwt_config.access_token_expiry,
     })
+}
+
+/// Register a user with the given role without issuing tokens.
+/// Useful for approval-based onboarding flows (e.g. mentors).
+pub async fn register_user_without_tokens(
+    pool: &PgPool,
+    mut req: RegisterRequest,
+    role: &str,
+) -> Result<UserResponse, AuthError> {
+    req.role = role.to_string();
+    AuthService::register(pool, req).await
+}
+
+/// Register a mentor with course selection.
+/// Creates a user with pending status and a mentor_application record.
+pub async fn register_mentor_with_course(
+    pool: &PgPool,
+    req: MentorRegisterRequest,
+) -> Result<UserResponse, AuthError> {
+    let register_req = RegisterRequest {
+        email: req.email,
+        password: req.password,
+        first_name: req.first_name,
+        last_name: req.last_name,
+        role: "mentor".to_string(),
+    };
+
+    let user = AuthService::register(pool, register_req).await?;
+
+    // Create mentor application record
+    AuthService::create_mentor_application(pool, user.id, req.course_id).await?;
+
+    Ok(user)
 }
 
 /// Authenticate a user, validate their role, and return an auth response with tokens.

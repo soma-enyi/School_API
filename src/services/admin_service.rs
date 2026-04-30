@@ -161,6 +161,7 @@ impl AdminService {
 
     /// Accept mentor
     pub async fn accept_mentor(pool: &PgPool, id: Uuid) -> Result<UserResponse, AuthError> {
+        // Update user status to accepted
         let user = sqlx::query_as::<_, User>(
             "UPDATE users SET status = 'accepted', is_active = true, updated_at = NOW()
              WHERE id = $1 AND role = 'mentor'
@@ -172,11 +173,47 @@ impl AdminService {
         .map_err(|e| AuthError::DatabaseError(e.to_string()))?
         .ok_or(AuthError::UserNotFound)?;
 
+        // Get all pending mentor applications for this user
+        let applications = sqlx::query_scalar::<_, Uuid>(
+            "SELECT course_id FROM mentor_applications WHERE user_id = $1 AND status = 'pending'",
+        )
+        .bind(id)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| AuthError::DatabaseError(e.to_string()))?;
+
+        // Create course_enrollments for each application
+        for course_id in applications {
+            sqlx::query(
+                "INSERT INTO course_enrollments (id, user_id, course_id, role, enrolled_at)
+                 VALUES ($1, $2, $3, 'mentor', NOW())
+                 ON CONFLICT (user_id, course_id) DO NOTHING"
+            )
+            .bind(Uuid::new_v4())
+            .bind(id)
+            .bind(course_id)
+            .execute(pool)
+            .await
+            .map_err(|e| AuthError::DatabaseError(e.to_string()))?;
+
+            // Update mentor_application status to accepted
+            sqlx::query(
+                "UPDATE mentor_applications SET status = 'accepted', updated_at = NOW()
+                 WHERE user_id = $1 AND course_id = $2"
+            )
+            .bind(id)
+            .bind(course_id)
+            .execute(pool)
+            .await
+            .map_err(|e| AuthError::DatabaseError(e.to_string()))?;
+        }
+
         Ok(UserResponse::from(user))
     }
 
     /// Reject mentor
     pub async fn reject_mentor(pool: &PgPool, id: Uuid) -> Result<UserResponse, AuthError> {
+        // Update user status to rejected
         let user = sqlx::query_as::<_, User>(
             "UPDATE users SET status = 'rejected', is_active = false, updated_at = NOW()
              WHERE id = $1 AND role = 'mentor'
@@ -187,6 +224,16 @@ impl AdminService {
         .await
         .map_err(|e| AuthError::DatabaseError(e.to_string()))?
         .ok_or(AuthError::UserNotFound)?;
+
+        // Mark all pending mentor applications as rejected
+        sqlx::query(
+            "UPDATE mentor_applications SET status = 'rejected', updated_at = NOW()
+             WHERE user_id = $1 AND status = 'pending'"
+        )
+        .bind(id)
+        .execute(pool)
+        .await
+        .map_err(|e| AuthError::DatabaseError(e.to_string()))?;
 
         Ok(UserResponse::from(user))
     }

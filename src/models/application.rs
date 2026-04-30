@@ -84,5 +84,3 @@ impl From<Application> for ApplicationResponse {
         }
     }
 }
-
-

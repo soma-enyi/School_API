@@ -83,6 +83,11 @@ impl AuthService {
             return Err(AuthError::Unauthorized);
         }
 
+        // Mentor accounts require explicit admin approval before login.
+        if user.role == "mentor" && user.status != "accepted" && user.status != "active" {
+            return Err(AuthError::Forbidden);
+        }
+
         // Verify password
         verify(&req.password, &user.password_hash)
             .map_err(|_| AuthError::InvalidCredentials)?;
@@ -131,5 +136,26 @@ impl AuthService {
         } else {
             Err(AuthError::Forbidden)
         }
+    }
+
+    /// Create a mentor application for a specific course
+    pub async fn create_mentor_application(
+        pool: &PgPool,
+        user_id: Uuid,
+        course_id: Uuid,
+    ) -> Result<(), AuthError> {
+        sqlx::query(
+            "INSERT INTO mentor_applications (id, user_id, course_id, status, created_at, updated_at)
+             VALUES ($1, $2, $3, 'pending', NOW(), NOW())
+             ON CONFLICT (user_id, course_id) DO NOTHING"
+        )
+        .bind(Uuid::new_v4())
+        .bind(user_id)
+        .bind(course_id)
+        .execute(pool)
+        .await
+        .map_err(|e| AuthError::DatabaseError(e.to_string()))?;
+
+        Ok(())
     }
 }

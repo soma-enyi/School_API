@@ -1,5 +1,5 @@
 use axum::{
-    extract::Path,
+    extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -9,6 +9,7 @@ use serde_json::Value;
 use sqlx::PgPool;
 
 use crate::controllers::mentor;
+use crate::controllers::mentor::{CreateAssignmentPayload, GradeAssignmentPayload};
 use crate::middlewares::MentorUser;
 use crate::utils::AuthError;
 
@@ -55,8 +56,9 @@ pub fn mentor_routes() -> Router<PgPool> {
 )]
 pub async fn get_dashboard(
     mentor_user: MentorUser,
+    State(pool): State<PgPool>,
 ) -> Result<impl IntoResponse, AuthError> {
-    let data = mentor::dashboard(mentor_user.user_id, &mentor_user.email);
+    let data = mentor::dashboard(&pool, mentor_user.user_id, &mentor_user.email).await?;
     Ok((StatusCode::OK, Json(data)))
 }
 
@@ -95,8 +97,9 @@ pub async fn get_profile(
 )]
 pub async fn get_students(
     mentor_user: MentorUser,
+    State(pool): State<PgPool>,
 ) -> Result<impl IntoResponse, AuthError> {
-    let data = mentor::students(mentor_user.user_id, &mentor_user.email);
+    let data = mentor::students(&pool, mentor_user.user_id, &mentor_user.email).await?;
     Ok((StatusCode::OK, Json(data)))
 }
 
@@ -116,9 +119,10 @@ pub async fn get_students(
 )]
 pub async fn get_student_progress(
     mentor_user: MentorUser,
+    State(pool): State<PgPool>,
     Path(student_id): Path<String>,
 ) -> Result<impl IntoResponse, AuthError> {
-    let data = mentor::student_progress(mentor_user.user_id, &student_id);
+    let data = mentor::student_progress(&pool, mentor_user.user_id, &student_id).await?;
     Ok((StatusCode::OK, Json(data)))
 }
 
@@ -128,6 +132,7 @@ pub async fn get_student_progress(
     path = "/mentor/assignments/{assignment_id}/grade",
     tag = "Mentor",
     params(("assignment_id" = String, Path, description = "Assignment UUID")),
+    request_body = GradeAssignmentPayload,
     responses(
         (status = 200, description = "Assignment graded successfully"),
         (status = 400, description = "Invalid request data", body = ErrorResponse),
@@ -139,10 +144,11 @@ pub async fn get_student_progress(
 )]
 pub async fn grade_assignment(
     mentor_user: MentorUser,
+    State(pool): State<PgPool>,
     Path(assignment_id): Path<String>,
-    Json(_payload): Json<Value>,
+    Json(payload): Json<GradeAssignmentPayload>,
 ) -> Result<impl IntoResponse, AuthError> {
-    let data = mentor::grade_assignment(mentor_user.user_id, &assignment_id);
+    let data = mentor::grade_assignment(&pool, mentor_user.user_id, &assignment_id, payload).await?;
     Ok((StatusCode::OK, Json(data)))
 }
 
@@ -151,6 +157,7 @@ pub async fn grade_assignment(
     post,
     path = "/mentor/assignments/create",
     tag = "Mentor",
+    request_body = CreateAssignmentPayload,
     responses(
         (status = 201, description = "Assignment created successfully"),
         (status = 400, description = "Invalid request data", body = ErrorResponse),
@@ -161,9 +168,10 @@ pub async fn grade_assignment(
 )]
 pub async fn create_assignment(
     mentor_user: MentorUser,
-    Json(_payload): Json<Value>,
+    State(pool): State<PgPool>,
+    Json(payload): Json<CreateAssignmentPayload>,
 ) -> Result<impl IntoResponse, AuthError> {
-    let data = mentor::create_assignment(mentor_user.user_id);
+    let data = mentor::create_assignment(&pool, mentor_user.user_id, payload).await?;
     Ok((StatusCode::CREATED, Json(data)))
 }
 
@@ -207,8 +215,9 @@ pub async fn message_student(
 )]
 pub async fn get_course_assignments(
     mentor_user: MentorUser,
+    State(pool): State<PgPool>,
     Path(course_id): Path<String>,
 ) -> Result<impl IntoResponse, AuthError> {
-    let data = mentor::course_assignments(mentor_user.user_id, &course_id);
+    let data = mentor::course_assignments(&pool, mentor_user.user_id, &course_id).await?;
     Ok((StatusCode::OK, Json(data)))
 }
