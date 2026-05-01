@@ -108,6 +108,7 @@ use crate::docs::security::SecurityAddon;
             crate::models::AuthResponse,
             crate::models::RefreshTokenRequest,
             crate::models::TokenResponse,
+            crate::routes::auth_routes::MentorRegistrationResponse,
             
             // Course models
             crate::models::Course,
@@ -118,6 +119,10 @@ use crate::docs::security::SecurityAddon;
             // Application models
             crate::models::ApplicationRequest,
             crate::models::ApplicationResponse,
+
+            // Mentor payload models
+            crate::controllers::mentor::CreateAssignmentPayload,
+            crate::controllers::mentor::GradeAssignmentPayload,
             
             // Error models
             crate::utils::ErrorResponse,
