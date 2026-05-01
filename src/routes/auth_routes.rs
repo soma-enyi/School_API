@@ -5,12 +5,21 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use serde::Serialize;
 use serde_json::json;
 use sqlx::PgPool;
+use utoipa::ToSchema;
 
 use crate::controllers::auth;
-use crate::models::{LoginRequest, RefreshTokenRequest, RegisterRequest};
+use crate::models::{LoginRequest, RefreshTokenRequest, RegisterRequest, MentorRegisterRequest};
 use crate::utils::{AuthError, JwtConfig};
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct MentorRegistrationResponse {
+    #[schema(example = "Mentor application submitted and pending admin review")]
+    pub message: String,
+    pub user: crate::models::UserResponse,
+}
 
 // ─── Route Definitions ───
 
@@ -126,9 +135,9 @@ pub async fn login_student(
     post,
     path = "/auth/mentor/register",
     tag = "Authentication",
-    request_body = RegisterRequest,
+    request_body = MentorRegisterRequest,
     responses(
-        (status = 201, description = "Mentor registered successfully", body = AuthResponse),
+        (status = 201, description = "Mentor application submitted successfully", body = MentorRegistrationResponse),
         (status = 400, description = "Invalid request data", body = ErrorResponse),
         (status = 409, description = "Email already exists", body = ErrorResponse),
         (status = 500, description = "Internal server error", body = ErrorResponse),
@@ -136,10 +145,17 @@ pub async fn login_student(
 )]
 pub async fn register_mentor(
     State((pool, jwt_config)): State<(PgPool, JwtConfig)>,
-    Json(req): Json<RegisterRequest>,
+    Json(req): Json<MentorRegisterRequest>,
 ) -> Result<impl IntoResponse, AuthError> {
-    let response = auth::register_user(&pool, req, "mentor", &jwt_config).await?;
-    Ok((StatusCode::CREATED, Json(response)))
+    let _ = jwt_config;
+    let user = auth::register_mentor_with_course(&pool, req).await?;
+    Ok((
+        StatusCode::CREATED,
+        Json(json!({
+            "message": "Mentor application submitted and pending admin review",
+            "user": user
+        })),
+    ))
 }
 
 /// Login as Mentor
@@ -151,7 +167,7 @@ pub async fn register_mentor(
     responses(
         (status = 200, description = "Login successful", body = AuthResponse),
         (status = 401, description = "Invalid credentials", body = ErrorResponse),
-        (status = 403, description = "Account deactivated", body = ErrorResponse),
+        (status = 403, description = "Account pending approval or deactivated", body = ErrorResponse),
     )
 )]
 pub async fn login_mentor(
