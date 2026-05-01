@@ -41,7 +41,6 @@ pub fn build_app(pool: PgPool) -> Router {
         .merge(
             Router::new()
                 .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
-                .route("/api-docs/openapi.json", get(openapi_json))
                 .layer(middleware::from_fn(swagger_basic_auth)),
         );
 
